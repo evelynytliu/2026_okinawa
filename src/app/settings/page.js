@@ -149,7 +149,7 @@ export default function SettingsPage() {
                 </div>
             </div>
 
-            <div className="card">
+            {/* <div className="card">
                 <div className={styles.settingItem}>
                     <div className={styles.settingInfo}>
                         <h4>資料庫初始化與更新</h4>
@@ -177,7 +177,7 @@ export default function SettingsPage() {
                         </button>
                     </div>
                 </div>
-            </div>
+            </div> */}
 
             <div className="card">
                 <h3>成員名單</h3>
