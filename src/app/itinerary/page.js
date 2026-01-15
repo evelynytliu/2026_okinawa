@@ -487,22 +487,42 @@ function ItineraryContent() {
                             </button>
                         </div>
 
-                        <div className={styles.modalImage}>
-                            {(selectedLoc.img_url || selectedLoc.imgUrl) ? (
-                                <img
-                                    src={selectedLoc.img_url || selectedLoc.imgUrl}
-                                    alt={selectedLoc.name}
-                                    onError={(e) => {
-                                        e.target.onerror = null;
-                                        e.target.src = 'https://placehold.co/600x400/e5e5e5/666?text=No+Image';
-                                    }}
-                                />
-                            ) : (
-                                <div style={{ width: '100%', height: '100%', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <span style={{ color: '#999' }}>暫無圖片</span>
-                                </div>
-                            )}
-                        </div>
+                        {(selectedLoc.img_url || (selectedLoc.gallery && selectedLoc.gallery.length > 0)) && (
+                            <div className={styles.modalImage}>
+                                {/* Prepare all images */}
+                                {(() => {
+                                    const allImages = [];
+                                    if (selectedLoc.img_url) allImages.push(selectedLoc.img_url);
+                                    if (selectedLoc.gallery && Array.isArray(selectedLoc.gallery)) {
+                                        selectedLoc.gallery.forEach(url => {
+                                            if (url && url !== selectedLoc.img_url) allImages.push(url);
+                                        });
+                                    }
+
+                                    // Remove duplicates just in case
+                                    const uniqueImages = [...new Set(allImages)];
+
+                                    if (uniqueImages.length === 0) return null;
+
+                                    return (
+                                        <div className={styles.imageScrollContainer}>
+                                            {uniqueImages.map((url, idx) => (
+                                                <img
+                                                    key={idx}
+                                                    src={url}
+                                                    alt={`${selectedLoc.name} - ${idx + 1}`}
+                                                    className={styles.scrollImage}
+                                                    onError={(e) => e.target.style.display = 'none'}
+                                                />
+                                            ))}
+                                            {uniqueImages.length > 1 && (
+                                                <div className={styles.scrollBadge}>{uniqueImages.length} 張照片</div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        )}
 
                         <div className={styles.modalBody}>
                             <h3>{selectedLoc.name}</h3>
