@@ -203,6 +203,7 @@ export default function EditLocationPage() {
     const [address, setAddress] = useState('');
     const [details, setDetails] = useState('');
     const [note, setNote] = useState('');
+    const [attachments, setAttachments] = useState([]);
 
     // Images: Array of objects
     // { id: string, url: string, file?: File, previewUrl?: string }
