@@ -213,7 +213,6 @@ function ItineraryContent() {
                             name,
                             address,
                             img_url,
-                            img_url,
                             gallery,
                             details,
                             attachments

@@ -241,7 +241,8 @@ export default function EditLocationPage() {
                         address,
                         details,
                         img_url,
-                        gallery
+                        gallery,
+                        attachments
                     )
                 `)
                 .eq('id', itemId)
