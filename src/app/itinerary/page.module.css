@@ -225,8 +225,7 @@
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.6);
-    z-index: 9999;
-    /* Increased to ensure it's above everything */
+    z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -272,6 +271,8 @@
     overflow: hidden;
     position: relative;
     border-bottom: 1px solid var(--color-sand);
+    flex-shrink: 0;
+    /* Prevent image from shrinking when content is long */
 }
 
 .modalImage img {
