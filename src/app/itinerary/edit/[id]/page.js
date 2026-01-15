@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Save, Upload, MapPin, Loader2, X, Link as LinkIcon } from 'lucide-react';
+import { ArrowLeft, Save, Upload, MapPin, Loader2, X, Link as LinkIcon, FileText } from 'lucide-react';
 import {
     DndContext,
     closestCenter,
@@ -253,10 +253,53 @@ export default function EditLocationPage() {
                 setNote(data.note || '');
                 setName(data.location.name || '');
                 setAddress(data.location.address || '');
+                // In fetchItemDetails
                 setDetails(data.location.details || '');
+                setAttachments(data.location.attachments || []); // Load attachments
 
-                const rawList = [];
-                if (data.location.img_url) rawList.push(data.location.img_url);
+                // ... existing image loading code ...
+
+                // ... existing functions ...
+
+                const handleAttachmentUpload = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    setUploading(true);
+                    try {
+                        const url = await uploadFileToSupabase(file);
+                        setAttachments(prev => [...prev, {
+                            id: Math.random().toString(36).substr(2, 9),
+                            name: file.name,
+                            url: url
+                        }]);
+                    } catch (err) {
+                        console.error('Upload failed:', err);
+                        alert('文件上傳失敗');
+                    } finally {
+                        setUploading(false);
+                        e.target.value = '';
+                    }
+                };
+
+                const removeAttachment = (id) => {
+                    if (confirm('確定要移除此文件嗎？')) {
+                        setAttachments(prev => prev.filter(f => f.id !== id));
+                    }
+                };
+
+                // ... inside handleSave ...
+                const { error: locError } = await supabase
+                    .from('locations')
+                    .update({
+                        name: name,
+                        address: address,
+                        details: details,
+                        img_url: finalImgUrl,
+                        gallery: dbUrls,
+                        attachments: attachments // Save attachments
+                    })
+                    .eq('id', itemData.location_id);
                 if (data.location.gallery && Array.isArray(data.location.gallery)) {
                     rawList.push(...data.location.gallery);
                 }
@@ -606,6 +649,69 @@ export default function EditLocationPage() {
                         onChange={e => setDetails(e.target.value)}
                         placeholder="輸入詳細介紹、電話、注意事項..."
                     />
+                </div>
+
+                {/* Attachments Section */}
+                <div className="form-group">
+                    <label style={labelStyle}>相關文件 (PDF)</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {attachments.map((file) => (
+                            <div key={file.id} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '0.8rem',
+                                background: '#f8f9fa',
+                                borderRadius: '8px',
+                                border: '1px solid #eee'
+                            }}>
+                                <FileText size={20} color="var(--primary, #0070f3)" />
+                                <a
+                                    href={file.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ flex: 1, marginLeft: '10px', textDecoration: 'none', color: '#333', fontWeight: '500' }}
+                                >
+                                    {file.name}
+                                </a>
+                                <button
+                                    onClick={() => removeAttachment(file.id)}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        padding: '4px',
+                                        color: '#ff4d4f'
+                                    }}
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                            </div>
+                        ))}
+
+                        <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '1rem',
+                            border: '2px dashed #ddd',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            color: '#666',
+                            gap: '0.5rem',
+                            transition: 'all 0.2s',
+                            marginTop: '0.5rem'
+                        }}>
+                            {uploading ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
+                            <span>{uploading ? '上傳中...' : '上傳 PDF 文件'}</span>
+                            <input
+                                type="file"
+                                accept=".pdf"
+                                style={{ display: 'none' }}
+                                onChange={handleAttachmentUpload}
+                                disabled={uploading}
+                            />
+                        </label>
+                    </div>
                 </div>
 
             </div>

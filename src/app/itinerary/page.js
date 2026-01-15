@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MapPin, Edit2, Copy, Map, X, Info, Trash2, Plus, Settings, GripVertical, Loader2 } from 'lucide-react';
+import { MapPin, Edit2, Copy, Map, X, Info, Trash2, Plus, Settings, GripVertical, Loader2, FileText, ExternalLink } from 'lucide-react';
 import { useTrip } from '@/context/TripContext';
 import { supabase } from '@/lib/supabase';
 import styles from './page.module.css';
@@ -213,8 +213,10 @@ function ItineraryContent() {
                             name,
                             address,
                             img_url,
+                            img_url,
                             gallery,
-                            details
+                            details,
+                            attachments
                         )
                     )
                 `)
@@ -543,6 +545,39 @@ function ItineraryContent() {
                                 <div className={styles.modalAddress}>
                                     <MapPin size={16} />
                                     <span>{selectedLoc.address}</span>
+                                </div>
+                            )}
+
+                            {/* Attachments Display */}
+                            {selectedLoc.attachments && selectedLoc.attachments.length > 0 && (
+                                <div style={{ marginBottom: '1.5rem' }}>
+                                    <h4 style={{ fontSize: '0.9rem', color: '#888', marginBottom: '0.5rem', fontWeight: 'bold' }}>相關文件</h4>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {selectedLoc.attachments.map((file, idx) => (
+                                            <a
+                                                key={idx}
+                                                href={file.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className={styles.attachmentBtn}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    padding: '0.8rem',
+                                                    backgroundColor: '#f8f9fa',
+                                                    borderRadius: '8px',
+                                                    textDecoration: 'none',
+                                                    color: '#333',
+                                                    border: '1px solid #eee',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                <FileText size={18} color="var(--primary, #0070f3)" style={{ marginRight: '8px' }} />
+                                                <span style={{ fontWeight: '500', flex: 1 }}>{file.name}</span>
+                                                <ExternalLink size={14} color="#aaa" />
+                                            </a>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
 
