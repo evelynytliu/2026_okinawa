@@ -230,6 +230,8 @@
     align-items: center;
     justify-content: center;
     padding: 1rem;
+    padding-bottom: 90px;
+    /* Avoid navbar */
     backdrop-filter: blur(4px);
     animation: fadeIn 0.2s ease-out;
 }
@@ -334,6 +336,14 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
+    position: sticky;
+    bottom: -1.5rem;
+    /* Offset parent padding */
+    background: var(--bg-card);
+    padding: 1rem 0;
+    margin-bottom: -1.5rem;
+    /* Offset parent padding */
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .actionBtn {
@@ -344,7 +354,8 @@
     padding: 0.8rem;
     border: 1px solid var(--primary);
     border-radius: 20px;
-    background: transparent;
+    background: var(--bg-card);
+    /* Ensure button background covers content */
     color: var(--primary);
     font-weight: 600;
     cursor: pointer;
