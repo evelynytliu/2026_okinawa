@@ -607,7 +607,7 @@ function ItineraryContent() {
                                 {selectedLoc.address && (
                                     <>
                                         <button onClick={(e) => handleCopy(e, selectedLoc.address)} className={styles.actionBtn}>
-                                            <Copy size={16} /> 複製
+                                            <Copy size={16} /> 複製地址
                                         </button>
                                         <button onClick={(e) => handleOpenMap(e, selectedLoc)} className={styles.actionBtn}>
                                             <Map size={16} /> 地圖
