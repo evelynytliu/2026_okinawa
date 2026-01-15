@@ -251,12 +251,17 @@
 }
 
 .topActions {
-    position: absolute;
+    position: sticky;
     top: 10px;
-    right: 10px;
     display: flex;
+    justify-content: flex-end;
+    padding-right: 10px;
     gap: 0.5rem;
-    z-index: 10;
+    z-index: 20;
+    margin-top: 10px;
+    margin-bottom: -46px;
+    /* Height 36px + Margin 10px */
+    pointer-events: none;
 }
 
 .iconBtn {
@@ -271,6 +276,7 @@
     justify-content: center;
     cursor: pointer;
     transition: background 0.2s;
+    pointer-events: auto;
 }
 
 .iconBtn:hover {
