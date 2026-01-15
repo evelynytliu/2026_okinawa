@@ -227,12 +227,13 @@ function ItineraryContent() {
                     .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
                     .map(item => {
                         const loc = item.location || {};
-                        // Fallback: Use gallery[0] as cover if img_url is missing
-                        const effectiveImgUrl = loc.img_url || (Array.isArray(loc.gallery) && loc.gallery.length > 0 ? loc.gallery[0] : null);
+                        // Use img_url from DB if available, otherwise check gallery
+                        const dbImgUrl = loc.img_url;
+                        const galleryImg = (Array.isArray(loc.gallery) && loc.gallery.length > 0) ? loc.gallery[0] : null;
 
                         return {
                             ...loc,
-                            img_url: effectiveImgUrl, // Override/Set img_url
+                            img_url: dbImgUrl || galleryImg, // Explicitly use DB value first
                             note: item.note,
                             item_id: item.id,
                             location_id: item.location_id,
