@@ -156,6 +156,10 @@ function ItineraryContent() {
                     { event: '*', schema: 'public', table: 'itinerary_items' },
                     () => fetchSchedule()
                 )
+                .on('postgres_changes',
+                    { event: '*', schema: 'public', table: 'locations' }, // Also listen to locations changes
+                    () => fetchSchedule()
+                )
                 .subscribe();
         }
 
@@ -164,19 +168,31 @@ function ItineraryContent() {
         };
     }, []);
 
-    // Check for deep link
+    // Sync selectedLoc with schedule updates & Check for deep link
     useEffect(() => {
-        const locId = searchParams.get('loc');
-        if (locId && schedule.length > 0) {
+        // 1. If a location is currently selected, update it with fresh data from schedule
+        if (selectedLoc) {
             for (const day of schedule) {
-                const found = day.locations?.find(l => l.id === locId);
+                const found = day.locations?.find(l => l.item_id === selectedLoc.item_id);
                 if (found) {
                     setSelectedLoc(found);
                     break;
                 }
             }
         }
-    }, [searchParams, schedule]);
+
+        // 2. Deep link handling (only on initial load or URL change)
+        const locId = searchParams.get('loc');
+        if (locId && schedule.length > 0 && !selectedLoc) { // Only if not already selected
+            for (const day of schedule) {
+                const found = day.locations?.find(l => l.id === locId); // Note: check id vs item_id based on URL param intent
+                if (found) {
+                    setSelectedLoc(found);
+                    break;
+                }
+            }
+        }
+    }, [schedule, searchParams]);
 
     const fetchSchedule = async () => {
         if (!supabase) return;
@@ -197,6 +213,7 @@ function ItineraryContent() {
                             name,
                             address,
                             img_url,
+                            gallery,
                             details
                         )
                     )
@@ -208,13 +225,20 @@ function ItineraryContent() {
             const transformed = daysData.map(day => {
                 const sortedItems = (day.itinerary_items || [])
                     .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-                    .map(item => ({
-                        ...item.location,
-                        note: item.note,
-                        item_id: item.id,
-                        location_id: item.location_id,
-                        sort_order: item.sort_order
-                    }));
+                    .map(item => {
+                        const loc = item.location || {};
+                        // Fallback: Use gallery[0] as cover if img_url is missing
+                        const effectiveImgUrl = loc.img_url || (Array.isArray(loc.gallery) && loc.gallery.length > 0 ? loc.gallery[0] : null);
+
+                        return {
+                            ...loc,
+                            img_url: effectiveImgUrl, // Override/Set img_url
+                            note: item.note,
+                            item_id: item.id,
+                            location_id: item.location_id,
+                            sort_order: item.sort_order
+                        };
+                    });
 
                 return {
                     id: day.day_number,

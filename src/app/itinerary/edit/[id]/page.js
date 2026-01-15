@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Save, Upload, MapPin, Loader2, X, Link as LinkIcon } from 'lucide-react';
@@ -20,8 +20,54 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+// --- Helper: Image Compression ---
+const compressImage = async (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                const MAX_WIDTH = 1280; // Reasonable size for web
+                const MAX_HEIGHT = 1280;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    if (!blob) return reject(new Error('Compression failed'));
+                    resolve(new File([blob], file.name, {
+                        type: 'image/jpeg',
+                        lastModified: Date.now(),
+                    }));
+                }, 'image/jpeg', 0.8);
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+    });
+};
+
 // --- Sortable Item Component ---
-function SortableImage({ url, id, index, onRemove }) {
+function SortableImage({ image, index, onRemove }) {
     const {
         attributes,
         listeners,
@@ -29,7 +75,9 @@ function SortableImage({ url, id, index, onRemove }) {
         transform,
         transition,
         isDragging
-    } = useSortable({ id });
+    } = useSortable({ id: image.id });
+
+    const [loadError, setLoadError] = useState(false);
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -45,11 +93,12 @@ function SortableImage({ url, id, index, onRemove }) {
         touchAction: 'none'
     };
 
-    const isValidUrl = url && typeof url === 'string' && (url.startsWith('http') || url.startsWith('/'));
+    const url = image.previewUrl || image.url; // Prefer previewUrl (blob) for new images
+    const isValidUrl = url && typeof url === 'string' && (url.startsWith('http') || url.startsWith('/') || url.startsWith('blob:'));
 
     return (
         <div ref={setNodeRef} style={style}>
-            {/* DRAGGABLE AREA: Only the image part has listeners */}
+            {/* DRAGGABLE AREA */}
             <div
                 {...attributes}
                 {...listeners}
@@ -58,27 +107,33 @@ function SortableImage({ url, id, index, onRemove }) {
                     height: '100%',
                     borderRadius: '10px',
                     overflow: 'hidden',
-                    cursor: 'grab'
+                    cursor: 'grab',
+                    backgroundColor: loadError ? '#f0f0f0' : 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                 }}
             >
-                {isValidUrl ? (
+                {isValidUrl && !loadError ? (
                     <img
                         src={url}
                         alt={`Gallery ${index}`}
                         style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
-                        onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.parentNode.style.backgroundColor = '#f0f0f0';
-                        }}
+                        onError={() => setLoadError(true)}
                     />
                 ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5', color: '#ccc' }}>
-                        Invalid
+                    <div style={{ padding: '0.5rem', textAlign: 'center', color: '#aaa', fontSize: '12px', pointerEvents: 'none' }}>
+                        {loadError ? '無法載入' : '無效圖片'}
+                    </div>
+                )}
+
+                {/* New Badge */}
+                {image.file && !loadError && (
+                    <div style={{ position: 'absolute', bottom: 4, right: 4, background: 'rgba(0,0,0,0.5)', color: 'white', fontSize: '10px', padding: '2px 4px', borderRadius: '4px' }}>
+                        待上傳
                     </div>
                 )}
             </div>
-
-            {/* NON-DRAGGABLE AREA: Buttons & Labels */}
 
             {/* Cover Label */}
             {index === 0 && (
@@ -99,21 +154,20 @@ function SortableImage({ url, id, index, onRemove }) {
                 </div>
             )}
 
-            {/* Remove Button - Totally independent DOM element */}
+            {/* Remove Button */}
             <button
-                type="button" // Important: accidental form submission prevention
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
-                    // Stop any propagation immediately
-                    e.stopPropagation();
                     e.preventDefault();
-                    onRemove(index);
+                    e.stopPropagation();
+                    onRemove(image.id);
                 }}
-                onPointerDown={(e) => e.stopPropagation()} // Prevent DnD start
                 style={{
                     position: 'absolute',
                     top: '6px',
                     right: '6px',
-                    background: 'rgba(255, 255, 255, 0.95)',
+                    background: 'white',
                     color: '#ff4d4f',
                     borderRadius: '50%',
                     width: '28px',
@@ -123,7 +177,7 @@ function SortableImage({ url, id, index, onRemove }) {
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
-                    zIndex: 20, // Higher than image
+                    zIndex: 20,
                     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                     padding: 0
                 }}
@@ -135,7 +189,6 @@ function SortableImage({ url, id, index, onRemove }) {
     );
 }
 
-// --- Main Page Component ---
 export default function EditLocationPage() {
     const router = useRouter();
     const params = useParams();
@@ -143,30 +196,36 @@ export default function EditLocationPage() {
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [uploading, setUploading] = useState(false);
+    const [uploading, setUploading] = useState(false); // Processing compression
 
-    // Data state
     const [itemData, setItemData] = useState(null);
     const [name, setName] = useState('');
     const [address, setAddress] = useState('');
     const [details, setDetails] = useState('');
     const [note, setNote] = useState('');
 
+    // Images: Array of objects
+    // { id: string, url: string, file?: File, previewUrl?: string }
     const [images, setImages] = useState([]);
+    const [initialImages, setInitialImages] = useState([]); // Track for dehydration
 
-    // DnD Sensors
     const sensors = useSensors(
-        useSensor(PointerSensor, {
-            activationConstraint: {
-                distance: 8
-            }
-        }),
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     );
 
     useEffect(() => {
         if (itemId) fetchItemDetails();
     }, [itemId]);
+
+    // Cleanup object URLs on unmount
+    useEffect(() => {
+        return () => {
+            images.forEach(img => {
+                if (img.previewUrl) URL.revokeObjectURL(img.previewUrl);
+            });
+        };
+    }, []);
 
     const fetchItemDetails = async () => {
         try {
@@ -202,21 +261,96 @@ export default function EditLocationPage() {
                     rawList.push(...data.location.gallery);
                 }
 
-                // Filter
-                const uniqueValidImages = [...new Set(rawList)].filter(url =>
-                    url &&
-                    typeof url === 'string' &&
-                    url.trim().length > 0 &&
-                    (url.startsWith('http') || url.startsWith('/'))
+                const uniqueUrls = [...new Set(rawList)].filter(url =>
+                    url && typeof url === 'string' && url.trim().length > 0
                 );
 
-                setImages(uniqueValidImages);
+                const imageObjects = uniqueUrls.map(url => ({
+                    id: Math.random().toString(36).substr(2, 9),
+                    url: url
+                }));
+
+                setImages(imageObjects);
+                setInitialImages(imageObjects); // copy for comparison later
             }
         } catch (err) {
             console.error('Error fetching details:', err);
             alert('無法載入資料');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleFileUpload = async (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        setUploading(true);
+        try {
+            // Compress all files first
+            const compressedFiles = await Promise.all(
+                files.map(async (file) => {
+                    try {
+                        return await compressImage(file);
+                    } catch (err) {
+                        console.warn('Compression failed, using original:', err);
+                        return file;
+                    }
+                })
+            );
+
+            // Create preview objects (No upload yet)
+            const newImageObjects = compressedFiles.map(file => ({
+                id: Math.random().toString(36).substr(2, 9),
+                url: '', // No remote URL yet
+                file: file,
+                previewUrl: URL.createObjectURL(file)
+            }));
+
+            setImages(prev => [...prev, ...newImageObjects]);
+
+        } catch (err) {
+            console.error('File processing failed:', err);
+            alert('照片處理失敗，請重試。');
+        } finally {
+            setUploading(false);
+            // Reset input
+            e.target.value = '';
+        }
+    };
+
+    const handleAddUrl = () => {
+        const url = prompt("請輸入圖片網址 (URL):");
+        if (url && url.startsWith('http')) {
+            setImages(prev => [...prev, {
+                id: Math.random().toString(36).substr(2, 9),
+                url: url
+                // No file, no previewUrl
+            }]);
+        }
+    };
+
+    const removeImage = (idToRemove) => {
+        setImages(prev => {
+            const newList = prev.filter(img => img.id !== idToRemove);
+
+            // If we remove a pending image, revoke its URL to free memory
+            const removed = prev.find(img => img.id === idToRemove);
+            if (removed && removed.previewUrl) {
+                URL.revokeObjectURL(removed.previewUrl);
+            }
+            return newList;
+        });
+    };
+
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+        if (active.id !== over.id) {
+            setImages((items) => {
+                const oldIndex = items.findIndex(i => i.id === active.id);
+                const newIndex = items.findIndex(i => i.id === over.id);
+                return arrayMove(items, oldIndex, newIndex);
+            });
         }
     };
 
@@ -227,23 +361,18 @@ export default function EditLocationPage() {
 
         let bucketName = null;
         let { error: uploadError } = await supabase.storage
-            .from('locations')
+            .from('locations') // Try 'locations' bucket
             .upload(fileName, file);
 
         if (!uploadError) {
             bucketName = 'locations';
         } else {
-            console.warn('Upload to locations failed:', uploadError.message);
+            // Fallback to 'images' bucket
             const { error: error2 } = await supabase.storage
                 .from('images')
                 .upload(fileName, file);
-
-            if (!error2) {
-                bucketName = 'images';
-            } else {
-                console.error('All upload attempts failed.');
-                throw error2;
-            }
+            if (!error2) bucketName = 'images';
+            else throw error2;
         }
 
         const { data: { publicUrl } } = supabase.storage
@@ -253,52 +382,56 @@ export default function EditLocationPage() {
         return publicUrl;
     };
 
-    const handleFileUpload = async (e) => {
-        const files = Array.from(e.target.files);
-        if (files.length === 0) return;
-
-        setUploading(true);
+    // --- Helpers for Cleaning Up ---
+    const getFileNameFromUrl = (url) => {
         try {
-            const newUrls = await Promise.all(files.map(file => uploadFileToSupabase(file)));
-            setImages(prev => [...prev, ...newUrls]);
-        } catch (err) {
-            console.error('Upload failed:', err);
-            alert('上傳失敗。請確認網路連線或稍後再試。');
-        } finally {
-            setUploading(false);
-        }
+            const parts = url.split('/');
+            return parts[parts.length - 1];
+        } catch (e) { return null; }
     };
 
-    const handleAddUrl = () => {
-        const url = prompt("請輸入圖片網址 (URL):");
-        if (url && url.startsWith('http')) {
-            setImages(prev => [...prev, url]);
-        }
+    const getBucketFromUrl = (url) => {
+        if (url.includes('/locations/')) return 'locations';
+        if (url.includes('/images/')) return 'images';
+        return null;
     };
 
-    // Remove function
-    const removeImage = (indexToRemove) => {
-        if (confirm('確定要移除這張照片嗎？')) {
-            setImages(prev => prev.filter((_, index) => index !== indexToRemove));
-        }
-    };
-
-    const handleDragEnd = (event) => {
-        const { active, over } = event;
-        if (active.id !== over.id) {
-            setImages((items) => {
-                const oldIndex = items.indexOf(active.id);
-                const newIndex = items.indexOf(over.id);
-                return arrayMove(items, oldIndex, newIndex);
-            });
+    const deleteImageFromSupabase = async (url) => {
+        const fileName = getFileNameFromUrl(url);
+        const bucket = getBucketFromUrl(url);
+        if (fileName && bucket) {
+            await supabase.storage.from(bucket).remove([fileName]);
         }
     };
 
     const handleSave = async () => {
         setSaving(true);
         try {
-            const finalImgUrl = images.length > 0 ? images[0] : null;
-            const finalGallery = images;
+            // 1. Upload new files (Replace previewUrl with real URL)
+            const finalImages = await Promise.all(images.map(async (img) => {
+                if (img.file) {
+                    const publicUrl = await uploadFileToSupabase(img.file);
+                    return { ...img, url: publicUrl, file: undefined, previewUrl: undefined };
+                }
+                return img;
+            }));
+
+            // 2. Identify deleted images (Existed in initial but not in final)
+            const finalUrls = new Set(finalImages.map(img => img.url));
+            const deletedImages = initialImages.filter(img => !finalUrls.has(img.url));
+
+            // 3. Delete from Storage (Async, don't block save)
+            deletedImages.forEach(img => {
+                // Only delete if it looks like a supabase storage URL
+                if (img.url.includes('supabase')) {
+                    console.log('Cleaning up deleted image:', img.url);
+                    deleteImageFromSupabase(img.url).catch(err => console.error('Cleanup failed', err));
+                }
+            });
+
+            // 4. Save to DB
+            const dbUrls = finalImages.map(img => img.url);
+            const finalImgUrl = dbUrls.length > 0 ? dbUrls[0] : null;
 
             const { error: locError } = await supabase
                 .from('locations')
@@ -307,7 +440,7 @@ export default function EditLocationPage() {
                     address: address,
                     details: details,
                     img_url: finalImgUrl,
-                    gallery: finalGallery
+                    gallery: dbUrls
                 })
                 .eq('id', itemData.location_id);
 
@@ -320,14 +453,11 @@ export default function EditLocationPage() {
 
             if (itemError) throw itemError;
 
+            router.refresh(); // Refresh server state
             router.back();
         } catch (err) {
             console.error('Save failed:', err);
-            if (err.message?.includes('gallery')) {
-                alert('資料庫欄位錯誤: 請確認 locations 表格已有 gallery 欄位。');
-            } else {
-                alert('儲存失敗');
-            }
+            alert('儲存失敗：' + (err.message || '未知錯誤'));
         } finally {
             setSaving(false);
         }
@@ -336,7 +466,7 @@ export default function EditLocationPage() {
     if (loading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div>;
 
     return (
-        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem', paddingBottom: '6rem' }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto', padding: '1rem', paddingBottom: '140px' }}>
             <header style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem' }}>
                 <button onClick={() => router.back()} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem' }}>
                     <ArrowLeft size={24} />
@@ -350,7 +480,9 @@ export default function EditLocationPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                     <label style={{ fontWeight: '600', color: '#555', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>圖片庫 (第 1 張為封面)</span>
-                        <span style={{ fontSize: '0.8rem', color: '#888' }}>{images.length} 張</span>
+                        <span style={{ fontSize: '0.8rem', color: '#888' }}>
+                            {images.length} 張 {images.some(i => i.file) && '(有未儲存圖片)'}
+                        </span>
                     </label>
 
                     <DndContext
@@ -359,15 +491,14 @@ export default function EditLocationPage() {
                         onDragEnd={handleDragEnd}
                     >
                         <SortableContext
-                            items={images}
+                            items={images.map(i => i.id)}
                             strategy={rectSortingStrategy}
                         >
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.8rem' }}>
-                                {images.map((url, index) => (
+                                {images.map((image, index) => (
                                     <SortableImage
-                                        key={url}
-                                        id={url}
-                                        url={url}
+                                        key={image.id}
+                                        image={image}
                                         index={index}
                                         onRemove={removeImage}
                                     />
@@ -391,7 +522,7 @@ export default function EditLocationPage() {
                                 }}>
                                     {uploading ? <Loader2 className="animate-spin" size={24} /> : <Upload size={24} />}
                                     <span style={{ fontSize: '0.75rem', marginTop: '6px', fontWeight: '500' }}>
-                                        {uploading ? '上傳中' : '上傳'}
+                                        {uploading ? '處理中' : '選擇照片'}
                                     </span>
                                     <input
                                         type="file"
@@ -482,20 +613,21 @@ export default function EditLocationPage() {
             {/* Sticky Save Button */}
             <div style={{
                 position: 'fixed',
-                bottom: 0,
+                bottom: '80px',
                 left: 0,
                 right: 0,
                 padding: '1rem',
-                background: 'white',
-                borderTop: '1px solid #eee',
+                background: 'linear-gradient(to top, rgba(255,255,255,1) 80%, rgba(255,255,255,0))',
                 display: 'flex',
                 justifyContent: 'center',
-                zIndex: 100
+                zIndex: 100,
+                pointerEvents: 'none'
             }}>
                 <button
                     onClick={handleSave}
-                    disabled={saving}
+                    disabled={saving || uploading}
                     style={{
+                        pointerEvents: 'auto',
                         width: '100%',
                         maxWidth: '600px',
                         padding: '1rem',
@@ -509,13 +641,13 @@ export default function EditLocationPage() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '0.5rem',
-                        opacity: saving ? 0.7 : 1,
-                        cursor: saving ? 'not-allowed' : 'pointer',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                        opacity: (saving || uploading) ? 0.7 : 1,
+                        cursor: (saving || uploading) ? 'not-allowed' : 'pointer',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                     }}
                 >
                     {saving ? <Loader2 className="animate-spin" /> : <Save />}
-                    {saving ? '儲存中...' : '儲存變更'}
+                    {saving ? '儲存中...' : (uploading ? '圖片處理中...' : '儲存變更')}
                 </button>
             </div>
 
