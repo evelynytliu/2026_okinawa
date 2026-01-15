@@ -536,7 +536,30 @@ function ItineraryContent() {
 
                             {selectedLoc.details && (
                                 <div className={styles.modalDesc}>
-                                    <p>{selectedLoc.details}</p>
+                                    <p>{(() => {
+                                        const text = selectedLoc.details;
+                                        if (!text) return null;
+                                        // Regex to find URLs (http/https or www)
+                                        const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+                                        return text.split(urlRegex).map((part, index) => {
+                                            if (part.match(urlRegex)) {
+                                                const href = part.startsWith('www.') ? `http://${part}` : part;
+                                                return (
+                                                    <a
+                                                        key={index}
+                                                        href={href}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        style={{ color: 'var(--primary)', textDecoration: 'underline', wordBreak: 'break-all' }}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        {part}
+                                                    </a>
+                                                );
+                                            }
+                                            return part;
+                                        });
+                                    })()}</p>
                                 </div>
                             )}
 
