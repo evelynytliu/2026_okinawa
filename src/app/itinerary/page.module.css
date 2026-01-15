@@ -368,13 +368,20 @@
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
     position: sticky;
-    bottom: -1.5rem;
-    /* Offset parent padding */
+    bottom: 0;
+    /* Fix clipping by sticking to 0, not negative */
+    z-index: 10;
+
     background: var(--bg-card);
-    padding: 1rem 0;
-    margin-bottom: -1.5rem;
-    /* Offset parent padding */
     border-top: 1px solid rgba(0, 0, 0, 0.05);
+
+    /* Expand to full width of modalBody */
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
+    margin-bottom: -1.5rem;
+
+    /* Add internal padding to match visual spacing */
+    padding: 1rem 1.5rem;
 }
 
 .actionBtn {
