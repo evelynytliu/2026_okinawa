@@ -1,0 +1,306 @@
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 0;
+    margin-bottom: 1.5rem;
+}
+
+.backBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-main);
+    padding: 0.5rem;
+}
+
+.heroCard {
+    background: linear-gradient(135deg, #2e8b99 0%, #246d78 100%);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 20px rgba(46, 139, 153, 0.2);
+}
+
+.heroIcon {
+    opacity: 0.8;
+}
+
+.heroContent p {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin-bottom: 0.2rem;
+}
+
+.heroContent h2 {
+    font-size: 2.2rem;
+    font-weight: 800;
+}
+
+.section {
+    margin-bottom: 2rem;
+}
+
+.sectionTitle {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    padding-left: 0.5rem;
+    border-left: 4px solid var(--primary);
+}
+
+.debtList {
+    background: white;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.debtItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.debtItem:last-child {
+    border-bottom: none;
+}
+
+.debtorInfo {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-weight: 600;
+}
+
+.avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.plusAmount {
+    color: #2e8b99;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.minusAmount {
+    color: #e53e3e;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.empty {
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.footerNote {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 1rem;
+}
+
+.repayFab {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-coral);
+    color: white;
+    padding: 0.8rem 2rem;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    box-shadow: 0 4px 15px rgba(255, 140, 105, 0.4);
+    text-decoration: none;
+    z-index: 100;
+}
+
+.suggestionList {
+    background: white;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.suggestionItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.2rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.suggestionItem:last-child {
+    border-bottom: none;
+}
+
+.sPerson {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sName {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-main);
+}
+
+.sLabel {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.sAmount {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #b45309;
+}
+
+.detailToggle {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: none;
+    border: none;
+    padding: 1rem 0.5rem;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.detailToggle h4 {
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.chevronOpen {
+    transform: rotate(90deg);
+}
+
+.auditContainer {
+    margin-top: 0.5rem;
+}
+
+.auditGroup {
+    background: white;
+    border-radius: var(--radius-md);
+    padding: 1.2rem;
+    margin-bottom: 1.2rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.auditHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 0.8rem;
+    margin-bottom: 1rem;
+}
+
+.auditHeader h5 {
+    font-size: 1.1rem;
+    margin: 0;
+    color: var(--text-main);
+}
+
+.positiveText {
+    color: #2e8b99;
+    font-weight: bold;
+}
+
+.negativeText {
+    color: #e53e3e;
+    font-weight: bold;
+}
+
+.auditSub {
+    margin-bottom: 1rem;
+}
+
+.auditSub:last-child {
+    margin-bottom: 0;
+}
+
+.auditSub h6 {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+.auditRow {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    padding: 0.4rem 0;
+    color: #64748b;
+}
+
+.auditMenu {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.auditAccordion {
+    width: 100%;
+}
+
+.groupToggle {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    border: none;
+    border-left: 5px solid #cbd5e1;
+    padding: 1rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s;
+}
+
+.groupToggle:hover {
+    background: #f8fafc;
+}
+
+.activeToggle {
+    background: #f1f5f9;
+}
+
+.groupInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.groupName {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-main);
+}

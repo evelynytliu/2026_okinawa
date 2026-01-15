@@ -1,0 +1,163 @@
+.actionBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    border: 1px solid var(--primary);
+    background: var(--color-white);
+    color: var(--primary);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+}
+
+.actionBtn:active {
+    transform: scale(0.96);
+    background: var(--color-sea-light);
+}
+
+.actionBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Inherited styles below (copying relevant parts from previous file to ensure no breaking changes if I overwrote the CSS file completely, but here I append or ensure existence. Actually I should check if I should append. The tool overwrites. So I need to include previous styles.) */
+
+.pageTitle {
+    margin-bottom: 1.5rem;
+    padding-left: 0.5rem;
+}
+
+.settingItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.settingInfo h4 {
+    margin-bottom: 0.2rem;
+    color: var(--text-main);
+}
+
+.settingInfo p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.toggleBtn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    border: 1px solid var(--text-muted);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.toggleBtn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--color-white);
+}
+
+.familyList {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.familyGroup {
+    border-bottom: 1px solid var(--color-sand);
+    padding-bottom: 0.5rem;
+}
+
+.familyGroup:last-child {
+    border-bottom: none;
+}
+
+.familyHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    border-left: 3px solid #ccc;
+    padding-left: 0.5rem;
+}
+
+.members {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-left: 0.5rem;
+}
+
+.memberTag {
+    font-size: 0.8rem;
+    background: var(--color-sand);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    color: var(--text-main);
+}
+
+.footer {
+    text-align: center;
+    margin-top: 2rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+.rateInputGroup {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.rateInput {
+    width: 80px;
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    font-size: 1rem;
+    text-align: center;
+}
+
+.saveBtn {
+    padding: 0.5rem 1rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.saveBtn:hover {
+    background: #257a87;
+}
+
+.saveBtn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}

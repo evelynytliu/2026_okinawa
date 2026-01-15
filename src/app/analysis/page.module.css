@@ -1,0 +1,18 @@
+.header {
+    display: flex;
+    align-items: center;
+    padding: 1rem 0;
+    margin-bottom: 1rem;
+}
+
+.backBtn {
+    margin-right: 1rem;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+}
+
+.header h2 {
+    font-size: 1.25rem;
+    margin: 0;
+}
