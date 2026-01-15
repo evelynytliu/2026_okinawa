@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MapPin, Edit2, Copy, Map, X, Info, Trash2, Plus, Settings, GripVertical, Loader2 } from 'lucide-react';
 import { useTrip } from '@/context/TripContext';
@@ -112,7 +112,7 @@ function SortableLocationItem({ loc, isEditMode, styles, openModal, handleRename
     );
 }
 
-export default function ItineraryPage() {
+function ItineraryContent() {
     const { isEditMode } = useTrip();
     const searchParams = useSearchParams();
     const [schedule, setSchedule] = useState([]);
@@ -591,5 +591,13 @@ export default function ItineraryPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function ItineraryPage() {
+    return (
+        <Suspense fallback={<div className="container" style={{ textAlign: 'center', marginTop: '2rem' }}><Loader2 className="spin" /> 載入中...</div>}>
+            <ItineraryContent />
+        </Suspense>
     );
 }
