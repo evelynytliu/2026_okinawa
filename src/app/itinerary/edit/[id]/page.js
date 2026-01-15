@@ -255,53 +255,11 @@ export default function EditLocationPage() {
                 setNote(data.note || '');
                 setName(data.location.name || '');
                 setAddress(data.location.address || '');
-                // In fetchItemDetails
                 setDetails(data.location.details || '');
-                setAttachments(data.location.attachments || []); // Load attachments
+                setAttachments(data.location.attachments || []);
 
-                // ... existing image loading code ...
-
-                // ... existing functions ...
-
-                const handleAttachmentUpload = async (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-
-                    setUploading(true);
-                    try {
-                        const url = await uploadFileToSupabase(file);
-                        setAttachments(prev => [...prev, {
-                            id: Math.random().toString(36).substr(2, 9),
-                            name: file.name,
-                            url: url
-                        }]);
-                    } catch (err) {
-                        console.error('Upload failed:', err);
-                        alert('文件上傳失敗');
-                    } finally {
-                        setUploading(false);
-                        e.target.value = '';
-                    }
-                };
-
-                const removeAttachment = (id) => {
-                    if (confirm('確定要移除此文件嗎？')) {
-                        setAttachments(prev => prev.filter(f => f.id !== id));
-                    }
-                };
-
-                // ... inside handleSave ...
-                const { error: locError } = await supabase
-                    .from('locations')
-                    .update({
-                        name: name,
-                        address: address,
-                        details: details,
-                        img_url: finalImgUrl,
-                        gallery: dbUrls,
-                        attachments: attachments // Save attachments
-                    })
-                    .eq('id', itemData.location_id);
+                const rawList = [];
+                if (data.location.img_url) rawList.push(data.location.img_url);
                 if (data.location.gallery && Array.isArray(data.location.gallery)) {
                     rawList.push(...data.location.gallery);
                 }
@@ -316,13 +274,40 @@ export default function EditLocationPage() {
                 }));
 
                 setImages(imageObjects);
-                setInitialImages(imageObjects); // copy for comparison later
+                setInitialImages(imageObjects);
             }
         } catch (err) {
             console.error('Error fetching details:', err);
             alert('無法載入資料');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleAttachmentUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setUploading(true);
+        try {
+            const url = await uploadFileToSupabase(file);
+            setAttachments(prev => [...prev, {
+                id: Math.random().toString(36).substr(2, 9),
+                name: file.name,
+                url: url
+            }]);
+        } catch (err) {
+            console.error('Upload failed:', err);
+            alert('文件上傳失敗');
+        } finally {
+            setUploading(false);
+            e.target.value = '';
+        }
+    };
+
+    const removeAttachment = (id) => {
+        if (confirm('確定要移除此文件嗎？')) {
+            setAttachments(prev => prev.filter(f => f.id !== id));
         }
     };
 
