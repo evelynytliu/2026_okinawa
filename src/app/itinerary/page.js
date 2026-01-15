@@ -277,6 +277,18 @@ function ItineraryContent() {
     const openModal = (loc) => setSelectedLoc(loc);
     const closeModal = () => setSelectedLoc(null);
 
+    // Prevent body scroll when modal is open
+    useEffect(() => {
+        if (selectedLoc || isAddModalOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'auto'; // or 'unset'
+        }
+        return () => {
+            document.body.style.overflow = 'auto';
+        };
+    }, [selectedLoc, isAddModalOpen]);
+
     const handleRename = async (e, loc) => {
         e.stopPropagation();
         const newName = prompt("修改景點名稱:", loc.name);
@@ -460,7 +472,20 @@ function ItineraryContent() {
             {selectedLoc && (
                 <div className={styles.modalOverlay} onClick={closeModal}>
                     <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-                        <button className={styles.closeBtn} onClick={closeModal}><X size={24} /></button>
+
+                        {/* Top Actions: Close & Edit */}
+                        <div className={styles.topActions}>
+                            <button
+                                onClick={() => window.location.href = `/itinerary/edit/${selectedLoc.item_id}`}
+                                className={styles.iconBtn}
+                                title="編輯詳細資料"
+                            >
+                                <Edit2 size={20} />
+                            </button>
+                            <button className={styles.iconBtn} onClick={closeModal}>
+                                <X size={24} />
+                            </button>
+                        </div>
 
                         <div className={styles.modalImage}>
                             {(selectedLoc.img_url || selectedLoc.imgUrl) ? (
@@ -512,13 +537,6 @@ function ItineraryContent() {
                                         </button>
                                     </>
                                 )}
-                                <button
-                                    onClick={() => window.location.href = `/itinerary/edit/${selectedLoc.item_id}`}
-                                    className={`${styles.actionBtn} ${styles.primaryActionBtn}`}
-                                    style={{ gridColumn: '1 / -1', background: 'var(--primary)', color: 'white', marginTop: '0.5rem' }}
-                                >
-                                    <Settings size={16} /> 編輯詳細資料
-                                </button>
                             </div>
                         </div>
                     </div>
