@@ -462,34 +462,22 @@ function ItineraryContent() {
                     <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
                         <button className={styles.closeBtn} onClick={closeModal}><X size={24} /></button>
 
-                        {(() => {
-                            // Debug logging
-                            console.log('=== MODAL DEBUG ===');
-                            console.log('selectedLoc:', selectedLoc);
-                            console.log('selectedLoc.img_url:', selectedLoc.img_url);
-                            console.log('selectedLoc.imgUrl:', selectedLoc.imgUrl);
-                            console.log('Condition check:', !!(selectedLoc.img_url || selectedLoc.imgUrl));
-
-                            return (selectedLoc.img_url || selectedLoc.imgUrl) ? (
-                                <div className={styles.modalImage}>
-                                    <img
-                                        src={selectedLoc.img_url || selectedLoc.imgUrl}
-                                        alt={selectedLoc.name}
-                                        onError={(e) => {
-                                            console.log('Image load error for:', e.target.src);
-                                            e.target.onerror = null;
-                                            e.target.src = 'https://placehold.co/600x400?text=No+Image';
-                                            e.target.style.objectFit = 'contain';
-                                        }}
-                                        onLoad={() => console.log('Image loaded successfully')}
-                                    />
-                                </div>
+                        <div className={styles.modalImage}>
+                            {(selectedLoc.img_url || selectedLoc.imgUrl) ? (
+                                <img
+                                    src={selectedLoc.img_url || selectedLoc.imgUrl}
+                                    alt={selectedLoc.name}
+                                    onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.src = 'https://placehold.co/600x400/e5e5e5/666?text=No+Image';
+                                    }}
+                                />
                             ) : (
-                                <div className={styles.modalImage} style={{ background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <span style={{ color: '#aaa' }}>暫無圖片</span>
+                                <div style={{ width: '100%', height: '100%', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <span style={{ color: '#999' }}>暫無圖片</span>
                                 </div>
-                            );
-                        })()}
+                            )}
+                        </div>
 
                         <div className={styles.modalBody}>
                             <h3>{selectedLoc.name}</h3>
