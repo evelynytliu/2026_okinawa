@@ -18,6 +18,9 @@ export default function AccommodationPage() {
             <div className={styles.list}>
                 {ACCOMMODATION.map(hotel => (
                     <div key={hotel.id} className={styles.card}>
+                        {hotel.img_url && (
+                            <img src={hotel.img_url} alt={hotel.name} className={styles.hotelImage} />
+                        )}
                         <div className={styles.cardHeader}>
                             <div className={styles.hotelInfo}>
                                 <h3>{hotel.name}</h3>

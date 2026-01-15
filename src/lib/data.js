@@ -81,6 +81,7 @@ export const ACCOMMODATION = [
   {
     id: "h1",
     name: "LACER OKINAWA NAHA Miebashi",
+    img_url: "https://cf.bstatic.com/xdata/images/hotel/max1024x768/642477862.jpg?k=131ca583635cd31f95766767a778dd69511845b34c97654597e5cda151dc4bca&o=",
     dates: "2026-02-04 - 2026-02-06",
     location: "那霸",
     address: "〒900-0016 沖縄県那覇市前島3-7-7",
@@ -95,6 +96,7 @@ export const ACCOMMODATION = [
   {
     id: "h2",
     name: "Riverside Chibana (河畔知花)",
+    img_url: "https://cf.bstatic.com/xdata/images/hotel/max1024x768/750613782.jpg?k=51f6b688dc7e462b9b4dad73653ebd5ce8450da2233a4480d94ae8786babf1a8&o=",
     dates: "2026-02-06 - 2026-02-08",
     location: "沖繩市",
     address: "沖縄県沖縄市知花3-19-20",
@@ -110,6 +112,7 @@ export const ACCOMMODATION = [
   {
     id: "h3",
     name: "Residential Hotel Naha (那霸住宅飯店)",
+    img_url: "https://r-xx.bstatic.com/xdata/images/hotel/300x225/485319429.jpg?k=100d0d0778e2d5a67b08a4e54e78dce367359525a57a35eb60e138ab12e396c1&o=",
     dates: "2026-02-08 - 2026-02-10",
     location: "那霸",
     address: "2-24-15 Kumoji, Naha",
