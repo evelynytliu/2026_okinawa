@@ -461,16 +461,23 @@ function ItineraryContent() {
                     <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
                         <button className={styles.closeBtn} onClick={closeModal}><X size={24} /></button>
 
-                        {(selectedLoc.img_url || selectedLoc.imgUrl) && (
+                        {(selectedLoc.img_url || selectedLoc.imgUrl) ? (
                             <div className={styles.modalImage}>
                                 <img
                                     src={selectedLoc.img_url || selectedLoc.imgUrl}
                                     alt={selectedLoc.name}
                                     onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.parentElement.style.display = 'none';
+                                        // On error, show a placeholder or keep the container but hide the broken image
+                                        e.target.onerror = null; // prevent loop
+                                        e.target.src = 'https://placehold.co/600x400?text=No+Image';
+                                        e.target.style.objectFit = 'contain';
                                     }}
                                 />
+                            </div>
+                        ) : (
+                            // Explicit placeholder if no image, to maintain "Format" consistency if that's what user means
+                            <div className={styles.modalImage} style={{ background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <span style={{ color: '#aaa' }}>暫無圖片</span>
                             </div>
                         )}
 
