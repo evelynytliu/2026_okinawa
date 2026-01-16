@@ -167,15 +167,36 @@ function AddExpensePageContent() {
                     <div style={{ position: 'relative' }}>
                         <input
                             ref={amountRef}
-                            type="number"
+                            type="text"
                             placeholder="0"
                             value={displayAmount}
-                            onChange={(e) => setDisplayAmount(e.target.value)}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val.endsWith('=')) {
+                                    const expression = val.slice(0, -1);
+                                    try {
+                                        if (/^[0-9+\-*/.() ]+$/.test(expression)) {
+                                            const result = new Function('return ' + expression)();
+                                            if (isFinite(result)) {
+                                                setDisplayAmount(Math.round(result * 100) / 100 + '');
+                                            }
+                                        }
+                                    } catch (err) { }
+                                } else {
+                                    if (/^[0-9+\-*/.() ]*$/.test(val)) {
+                                        setDisplayAmount(val);
+                                    }
+                                }
+                            }}
                             className={styles.amountInput}
+                            inputMode="decimal"
                             autoFocus
                             required
                         />
-                        {currency === 'JPY' && displayAmount && (
+                        <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: 4, textAlign: 'right' }}>
+                            💡 支援算式輸入 (如 900/3=)
+                        </div>
+                        {currency === 'JPY' && !isNaN(Number(displayAmount)) && displayAmount && (
                             <div className={styles.conversionPreview}>
                                 ≈ <span>TWD ${finalTwdAmount.toLocaleString()}</span>
                                 <small>(匯率: {jpyRate})</small>

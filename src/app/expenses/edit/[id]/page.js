@@ -215,14 +215,41 @@ export default function EditExpensePage() {
                     <div style={{ position: 'relative' }}>
                         <input
                             ref={amountRef}
-                            type="number"
+                            type="text"
                             placeholder="0"
                             value={displayAmount}
-                            onChange={(e) => setDisplayAmount(e.target.value)}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                // Simple calculator logic
+                                if (val.endsWith('=')) {
+                                    const expression = val.slice(0, -1);
+                                    try {
+                                        // Allow only safe characters
+                                        if (/^[0-9+\-*/.() ]+$/.test(expression)) {
+                                            const result = new Function('return ' + expression)();
+                                            if (isFinite(result)) {
+                                                // Round to sensible precision (e.g. 1 decimal if needed, usually int for expenses)
+                                                setDisplayAmount(Math.round(result * 100) / 100 + '');
+                                            }
+                                        }
+                                    } catch (err) {
+                                        // Ignore calc errors
+                                    }
+                                } else {
+                                    // Allow typing numbers and math operators
+                                    if (/^[0-9+\-*/.() ]*$/.test(val)) {
+                                        setDisplayAmount(val);
+                                    }
+                                }
+                            }}
                             className={styles.amountInput}
+                            inputMode="decimal"
                             required
                         />
-                        {currency === 'JPY' && displayAmount && (
+                        <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: 4, textAlign: 'right' }}>
+                            💡 支援算式輸入 (如 900/3=)
+                        </div>
+                        {currency === 'JPY' && !isNaN(Number(displayAmount)) && displayAmount && (
                             <div className={styles.conversionPreview}>
                                 ≈ <span>TWD ${finalTwdAmount.toLocaleString()}</span>
                                 <small>(匯率: {jpyRate})</small>
