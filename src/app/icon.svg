@@ -13,8 +13,8 @@
     </linearGradient>
   </defs>
 
-  <!-- Background -->
-  <rect width="512" height="512" rx="120" fill="url(#bg_gradient)" />
+  <!-- Background: Full Square (No Radius for System Masking) -->
+  <rect width="512" height="512" fill="url(#bg_gradient)" />
 
   <!-- Bold Composition: Lighthouse Off-Center -->
   <!-- Tower Body: Solid White, minimalist tall perspective -->
@@ -36,6 +36,7 @@
   </g>
   
   <!-- Simple accent: The Sun/Moon in negative space or subtle -->
-  <circle cx="400" cy="120" r="40" fill="white" fill-opacity="0.2" />
+  <!-- Adjusted position to ensure it's not cut off by tight masks -->
+  <circle cx="380" cy="120" r="35" fill="white" fill-opacity="0.2" />
 
 </svg>
