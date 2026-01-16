@@ -30,68 +30,82 @@ export default function Dashboard() {
   return (
     <div className={styles.dashboard}>
       <header className={styles.header}>
-        <h1 className="fade-in">Okinawa <br /> 2026</h1>
+        <h1 className={`${styles.titleMain} fade-in`}>Okinawa</h1>
+        <span className={`${styles.titleYear} fade-in`}>2026</span>
         <p className={`${styles.subtitle} fade-in`}>Family Trip &bull; {TRIP_DETAILS.dates.start.replace(/-/g, '.')}</p>
       </header>
 
-      <Link href="/flights" className={`${styles.countdown} card fade-in`}>
-        <div className={styles.countdownText}>
-          <span className={styles.days}>{daysLeft}</span>
-          <span className={styles.label}>距離出發 (天)</span>
+      <Link href="/flights" className={`${styles.heroCard} fade-in`}>
+        <div className={styles.countdownBlock}>
+          <span className={styles.daysBig}>{daysLeft}</span>
+          <span className={styles.daysLabel}>DAYS TO GO</span>
         </div>
-        <div className={styles.flightInfo}>
-          <Plane className={styles.planeIcon} size={40} />
-          <span className={styles.flightText}>班機資訊</span>
+        <div className={styles.flightBadge}>
+          <Plane size={24} style={{ transform: 'rotate(-45deg)' }} />
         </div>
       </Link>
 
       {featuredSpot && (
         <Link href={`/itinerary?loc=${featuredSpot.id}`} className={styles.featuredLink}>
           <div
-            className={`${styles.featuredCard} card fade-in`}
-            style={{ backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.95) 100%), url(${featuredSpot.img_url})` }}
+            className={`${styles.featuredCard} fade-in`}
+            style={{ backgroundImage: `url(${featuredSpot.img_url})` }}
           >
+            <div className={styles.featuredOverlay} />
             <div className={styles.featuredContent}>
-              <span className={styles.featuredLabel}>景點搶先看</span>
-              <h3>{featuredSpot.name}</h3>
-              <p className={styles.featuredText}>{featuredSpot.details.substring(0, 40)}...</p>
+              <span className={styles.spotlightTag}>Spotlight</span>
+              <h3 className={styles.featuredTitle}>{featuredSpot.name}</h3>
+              <p className={styles.featuredDetail}>{featuredSpot.details}</p>
             </div>
           </div>
         </Link>
       )}
 
-      <div className={styles.actionGrid}>
-        <Link href="/expenses/add" className={styles.actionCard}>
-          <PlusCircle size={32} color="var(--color-coral)" />
-          <span>記一筆</span>
+      <div className={styles.bentoGrid}>
+        {/* Primary Action: Add Expense (Tall - spans 2 rows in CSS if supported, or just distinct style) */}
+        <Link href="/expenses/add" className={`${styles.bentoCard} ${styles.cardPrimary}`}>
+          <div className={styles.cardIcon}>
+            <PlusCircle size={40} color="white" />
+          </div>
+          <span className={styles.cardLabel}>記一筆</span>
         </Link>
-        <Link href="/itinerary" className={styles.actionCard}>
-          <Calendar size={32} color="var(--color-sea-blue)" />
-          <span>查看行程</span>
+
+        {/* Secondary Action: Itinerary (Dark) */}
+        <Link href="/itinerary" className={`${styles.bentoCard} ${styles.cardAccent}`}>
+          <div className={styles.cardIcon}>
+            <Calendar size={32} color="white" />
+          </div>
+          <span className={styles.cardLabel}>查看行程</span>
         </Link>
-        <Link href="/expenses" className={styles.actionCard}>
-          <CreditCard size={32} color="var(--color-gold)" />
-          <span>消費明細</span>
+
+        <Link href="/expenses" className={styles.bentoCard}>
+          <CreditCard size={28} className={styles.cardIcon} color="var(--color-gold)" />
+          <span className={styles.cardLabel}>消費明細</span>
         </Link>
-        <Link href="/analysis" className={styles.actionCard}>
-          <PieChart size={32} color="#2E8B99" />
-          <span>家庭/個人支出</span>
+
+        <Link href="/analysis" className={styles.bentoCard}>
+          <PieChart size={28} className={styles.cardIcon} color="#2E8B99" />
+          <span className={styles.cardLabel}>支出統計</span>
         </Link>
-        <Link href="/settlement" className={styles.actionCard}>
-          <Wallet size={32} color="#f59e0b" />
-          <span>待結清款</span>
+
+        <Link href="/settlement" className={styles.bentoCard}>
+          <Wallet size={28} className={styles.cardIcon} color="#f59e0b" />
+          <span className={styles.cardLabel}>待結清款</span>
         </Link>
-        <Link href="/accommodation" className={styles.actionCard}>
-          <Hotel size={32} color="#E6B422" />
-          <span>房間分配</span>
+
+        <Link href="/accommodation" className={styles.bentoCard}>
+          <Hotel size={28} className={styles.cardIcon} color="#E6B422" />
+          <span className={styles.cardLabel}>房間分配</span>
         </Link>
-        <Link href="/checklist" className={styles.actionCard}>
-          <ClipboardList size={32} color="#6366f1" />
-          <span>待辦與行李</span>
+
+        <Link href="/checklist" className={styles.bentoCard}>
+          <ClipboardList size={28} className={styles.cardIcon} color="#6366f1" />
+          <span className={styles.cardLabel}>待辦與行李</span>
         </Link>
-        <Link href="/wishes" className={styles.actionCard}>
-          <Sparkles size={32} color="#ec4899" />
-          <span>許願池</span>
+
+        <Link href="/wishes" className={styles.bentoCard}>
+          <Sparkles size={28} className={styles.cardIcon} color="#ec4899" />
+          <span className={styles.cardLabel}>許願池</span>
         </Link>
       </div>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MapPin, Edit2, Copy, Map, X, Info, Trash2, Plus, Settings, GripVertical, Loader2, FileText, ExternalLink } from 'lucide-react';
+import { MapPin, Edit2, Copy, Map, X, Info, Trash2, Plus, Settings, GripVertical, Loader2, FileText, ExternalLink, Upload } from 'lucide-react';
 import { useTrip } from '@/context/TripContext';
 import { supabase } from '@/lib/supabase';
 import styles from './page.module.css';
@@ -112,12 +112,74 @@ function SortableLocationItem({ loc, isEditMode, styles, openModal, handleRename
     );
 }
 
+// --- Helper: Image Compression ---
+const compressImage = async (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                const MAX_WIDTH = 1280;
+                const MAX_HEIGHT = 1280;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    if (!blob) return reject(new Error('Compression failed'));
+                    resolve(new File([blob], file.name, {
+                        type: 'image/jpeg',
+                        lastModified: Date.now(),
+                    }));
+                }, 'image/jpeg', 0.8);
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+    });
+};
+
+const getWeekday = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+        const date = new Date(dateStr);
+        // Correcting for potential timezone issues by appending time if needed, 
+        // but normally YYYY-MM-DD in JS defaults to UTC. 
+        // We just want to map that date to a weekday.
+        const dayIndex = date.getUTCDay(); // Use UTCDay because YYYY-MM-DD is parsed as UTC midnight
+        const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        return days[dayIndex];
+    } catch (e) {
+        return '';
+    }
+};
+
 function ItineraryContent() {
     const { isEditMode } = useTrip();
     const searchParams = useSearchParams();
     const [schedule, setSchedule] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedLoc, setSelectedLoc] = useState(null);
+    const [uploading, setUploading] = useState(false);
 
     // Add Modal State
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -144,7 +206,7 @@ function ItineraryContent() {
         })
     );
 
-    // Data fetching
+    // Data fetching & Subscription
     useEffect(() => {
         fetchSchedule();
 
@@ -154,11 +216,17 @@ function ItineraryContent() {
                 .channel('itinerary_updates')
                 .on('postgres_changes',
                     { event: '*', schema: 'public', table: 'itinerary_items' },
-                    () => fetchSchedule()
+                    () => {
+                        console.log('Itinerary item changed, refreshing...');
+                        fetchSchedule();
+                    }
                 )
                 .on('postgres_changes',
-                    { event: '*', schema: 'public', table: 'locations' }, // Also listen to locations changes
-                    () => fetchSchedule()
+                    { event: 'UPDATE', schema: 'public', table: 'locations' },
+                    (payload) => {
+                        console.log('Location updated, refreshing...', payload);
+                        fetchSchedule();
+                    }
                 )
                 .subscribe();
         }
@@ -215,7 +283,9 @@ function ItineraryContent() {
                             img_url,
                             gallery,
                             details,
-                            attachments
+                            attachments,
+                            type,
+                            hotel_id
                         )
                     )
                 `)
@@ -357,6 +427,68 @@ function ItineraryContent() {
         fetchSchedule();
     };
 
+    // NEW: Handle Image Upload from Modal
+    const handleModalImageUpload = async (e, loc) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        setUploading(true);
+        try {
+            // 1. Compress
+            const compressedFile = await compressImage(files[0]);
+
+            // 2. Upload to 'images' bucket (as requested)
+            const fileExt = compressedFile.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('images')
+                .upload(fileName, compressedFile);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('images')
+                .getPublicUrl(fileName);
+
+            // 3. Update Gallery in DB
+            const currentGallery = loc.gallery || [];
+            // Use set to ensure unique, also if img_url was there, add it to gallery logic if needed, but for now just append
+            // Note: If no img_url set, this new one becomes it potentially by logic in fetchSchedule, 
+            // but explicitly:
+            let newGallery = [...currentGallery, publicUrl];
+
+            // Should we also set img_url if it's null? 
+            // The fetchSchedule logic prefers img_url then gallery[0].
+            // Let's just update gallery.
+
+            // Also if img_url is empty, maybe set it? 
+            // For now, let's just append to gallery which is safer.
+
+            const { error: dbError } = await supabase
+                .from('locations')
+                .update({
+                    gallery: newGallery,
+                    // If no main image, set this as main image
+                    ...(!loc.img_url ? { img_url: publicUrl } : {})
+                })
+                .eq('id', loc.location_id);
+
+            if (dbError) throw dbError;
+
+            // 4. Optimistic or full refresh handled by real-time subscription usually, 
+            // but let's call fetchSchedule to be sure or rely on the Realtime subscription we set up.
+            // (Realtime is active in useEffect)
+
+        } catch (err) {
+            console.error('Upload failed:', err);
+            alert('上傳失敗: ' + (err.message || '未知錯誤'));
+        } finally {
+            setUploading(false);
+            e.target.value = ''; // Reset input
+        }
+    };
+
     // --- Drag and Drop Handler ---
     const handleDragEnd = async (event) => {
         const { active, over } = event;
@@ -418,6 +550,7 @@ function ItineraryContent() {
                         <div key={dayItem.id} className={`${styles.dayBlock} fade-in`} style={{ animationDelay: `${index * 0.1}s` }}>
                             <div className={styles.dateColumn}>
                                 <span className={styles.dateLabel}>{dayItem.date_display?.slice(5).replace('-', '/')}</span>
+                                <span className={styles.weekdayLabel}>{getWeekday(dayItem.date_display)}</span>
                                 <span className={styles.dayLabel}>第 {dayItem.day_number} 天</span>
                             </div>
 
@@ -526,7 +659,27 @@ function ItineraryContent() {
                         )}
 
                         <div className={styles.modalBody}>
-                            <h3>{selectedLoc.name}</h3>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                <h3>{selectedLoc.name}</h3>
+                                {selectedLoc.type && selectedLoc.type !== 'spot' && (
+                                    <span style={{
+                                        fontSize: '0.75rem',
+                                        padding: '2px 8px',
+                                        borderRadius: '12px',
+                                        backgroundColor: '#e0e0e0',
+                                        color: '#555',
+                                        fontWeight: 'bold'
+                                    }}>
+                                        {{
+                                            food: '食',
+                                            stay: '住',
+                                            fun: '樂',
+                                            shop: '買',
+                                            transport: '行'
+                                        }[selectedLoc.type] || selectedLoc.type}
+                                    </span>
+                                )}
+                            </div>
 
                             {selectedLoc.note && (
                                 <div className={styles.modalNote}>
@@ -613,6 +766,16 @@ function ItineraryContent() {
                                             <Map size={16} /> 地圖
                                         </button>
                                     </>
+                                )}
+                                {/* Room Link Button */}
+                                {selectedLoc.type === 'stay' && selectedLoc.hotel_id && (
+                                    <button
+                                        onClick={() => window.location.href = `/accommodation#${selectedLoc.hotel_id}`}
+                                        className={styles.actionBtn}
+                                        style={{ backgroundColor: '#E6B422', color: 'white' }}
+                                    >
+                                        <ExternalLink size={16} /> 房間分配
+                                    </button>
                                 )}
                             </div>
                         </div>

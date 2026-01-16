@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Save, Upload, MapPin, Loader2, X, Link as LinkIcon, FileText } from 'lucide-react';
+import { ArrowLeft, Save, Upload, MapPin, Loader2, X, Link as LinkIcon, FileText, Trash2 } from 'lucide-react';
 import {
     DndContext,
     closestCenter,
@@ -19,6 +19,7 @@ import {
     rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { ACCOMMODATION } from '@/lib/data';
 
 // --- Helper: Image Compression ---
 const compressImage = async (file) => {
@@ -205,6 +206,10 @@ export default function EditLocationPage() {
     const [note, setNote] = useState('');
     const [attachments, setAttachments] = useState([]);
 
+    // NEW FIELDS
+    const [type, setType] = useState('spot'); // spot, food, stay, fun, shop, transport
+    const [hotelId, setHotelId] = useState('');
+
     // Images: Array of objects
     // { id: string, url: string, file?: File, previewUrl?: string }
     const [images, setImages] = useState([]);
@@ -243,7 +248,9 @@ export default function EditLocationPage() {
                         details,
                         img_url,
                         gallery,
-                        attachments
+                        attachments,
+                        type,
+                        hotel_id
                     )
                 `)
                 .eq('id', itemId)
@@ -257,6 +264,10 @@ export default function EditLocationPage() {
                 setAddress(data.location.address || '');
                 setDetails(data.location.details || '');
                 setAttachments(data.location.attachments || []);
+
+                // Set Type and Hotel (handle missing columns if DB not updated yet)
+                setType(data.location.type || 'spot');
+                setHotelId(data.location.hotel_id || '');
 
                 const rawList = [];
                 if (data.location.img_url) rawList.push(data.location.img_url);
@@ -278,18 +289,27 @@ export default function EditLocationPage() {
             }
         } catch (err) {
             console.error('Error fetching details:', err);
-            alert('無法載入資料');
+            // Don't alert here to avoid spamming if columns are missing temporarily
         } finally {
             setLoading(false);
         }
     };
 
     const handleAttachmentUpload = async (e) => {
-        const file = e.target.files[0];
+        let file = e.target.files[0];
         if (!file) return;
 
         setUploading(true);
         try {
+            // Compress if image
+            if (file.type.startsWith('image/')) {
+                try {
+                    file = await compressImage(file);
+                } catch (err) {
+                    console.warn('Compression failed, using original', err);
+                }
+            }
+
             const url = await uploadFileToSupabase(file);
             setAttachments(prev => [...prev, {
                 id: Math.random().toString(36).substr(2, 9),
@@ -351,12 +371,16 @@ export default function EditLocationPage() {
 
     const handleAddUrl = () => {
         const url = prompt("請輸入圖片網址 (URL):");
-        if (url && url.startsWith('http')) {
+        if (!url) return;
+
+        if (url.startsWith('http') || url.startsWith('/')) {
             setImages(prev => [...prev, {
                 id: Math.random().toString(36).substr(2, 9),
                 url: url
                 // No file, no previewUrl
             }]);
+        } else {
+            alert("網址格式錯誤，請輸入完整的 URL (例如: https://...)");
         }
     };
 
@@ -470,7 +494,10 @@ export default function EditLocationPage() {
                     address: address,
                     details: details,
                     img_url: finalImgUrl,
-                    gallery: dbUrls
+                    gallery: dbUrls,
+                    attachments: attachments,
+                    type: type,
+                    hotel_id: type === 'stay' ? hotelId : null
                 })
                 .eq('id', itemData.location_id);
 
@@ -505,6 +532,63 @@ export default function EditLocationPage() {
             </header>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+                {/* NEW: Type Selection */}
+                <div className="form-group">
+                    <label style={labelStyle}>類型</label>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {[
+                            { id: 'spot', label: '景點', icon: '📍' },
+                            { id: 'food', label: '食', icon: '🍜' },
+                            { id: 'fun', label: '樂', icon: '🎡' },
+                            { id: 'stay', label: '住', icon: '🏨' },
+                            { id: 'shop', label: '買', icon: '🛍️' },
+                            { id: 'transport', label: '行', icon: '🚗' },
+                        ].map(t => (
+                            <button
+                                key={t.id}
+                                onClick={() => setType(t.id)}
+                                style={{
+                                    padding: '0.6rem 1rem',
+                                    borderRadius: '20px',
+                                    border: type === t.id ? '2px solid var(--primary, #0070f3)' : '1px solid #ddd',
+                                    backgroundColor: type === t.id ? 'var(--primary, #0070f3)' : '#fff',
+                                    color: type === t.id ? '#fff' : '#555',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                    flex: '1 0 auto',
+                                    textAlign: 'center',
+                                    transition: 'all 0.2s',
+                                    fontSize: '0.9rem'
+                                }}
+                            >
+                                {t.icon} {t.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* NEW: Hotel Selection (Visible only if type is 'stay') */}
+                {type === 'stay' && (
+                    <div className="form-group animate-in" style={{ animation: 'fadeIn 0.3s ease' }}>
+                        <label style={labelStyle}>連結到房間分配頁面</label>
+                        <select
+                            style={inputStyle}
+                            value={hotelId}
+                            onChange={(e) => setHotelId(e.target.value)}
+                        >
+                            <option value="">-- 請選擇飯店 --</option>
+                            {ACCOMMODATION.map(hotel => (
+                                <option key={hotel.id} value={hotel.id}>
+                                    {hotel.name}
+                                </option>
+                            ))}
+                        </select>
+                        <p style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.3rem' }}>
+                            選擇後，行程詳情頁面將會顯示「查看房間分配」的連結按鈕。
+                        </p>
+                    </div>
+                )}
 
                 {/* Unified Image Section */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
@@ -565,8 +649,13 @@ export default function EditLocationPage() {
                                 </label>
 
                                 {/* Add URL Button */}
-                                <div
-                                    onClick={handleAddUrl}
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleAddUrl();
+                                    }}
                                     style={{
                                         aspectRatio: '1',
                                         borderRadius: '12px',
@@ -580,12 +669,13 @@ export default function EditLocationPage() {
                                         color: '#666',
                                         transition: 'all 0.2s',
                                         textAlign: 'center',
-                                        padding: '4px'
+                                        padding: '4px',
+                                        fontFamily: 'inherit'
                                     }}
                                 >
                                     <LinkIcon size={24} />
                                     <span style={{ fontSize: '0.75rem', marginTop: '6px' }}>網址</span>
-                                </div>
+                                </button>
                             </div>
                         </SortableContext>
                     </DndContext>
@@ -640,7 +730,7 @@ export default function EditLocationPage() {
 
                 {/* Attachments Section */}
                 <div className="form-group">
-                    <label style={labelStyle}>相關文件 (PDF)</label>
+                    <label style={labelStyle}>相關文件 (PDF/照片)</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         {attachments.map((file) => (
                             <div key={file.id} style={{
@@ -689,10 +779,10 @@ export default function EditLocationPage() {
                             marginTop: '0.5rem'
                         }}>
                             {uploading ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
-                            <span>{uploading ? '上傳中...' : '上傳 PDF 文件'}</span>
+                            <span>{uploading ? '上傳中...' : '上傳文件或照片'}</span>
                             <input
                                 type="file"
-                                accept=".pdf"
+                                accept=".pdf,image/*"
                                 style={{ display: 'none' }}
                                 onChange={handleAttachmentUpload}
                                 disabled={uploading}
