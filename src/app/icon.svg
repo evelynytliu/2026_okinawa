@@ -1,0 +1,48 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg_gradient" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4DD0E1" />
+      <stop offset="100%" stop-color="#006064" />
+    </linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="rgba(0,0,0,0.25)"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="512" height="512" rx="120" fill="url(#bg_gradient)" />
+  
+  <!-- Ocean Waves (Subtle) -->
+  <path d="M0 350 C 150 400, 350 300, 512 350 L 512 512 L 0 512 Z" fill="#ffffff" fill-opacity="0.1"/>
+  <path d="M0 400 C 150 450, 350 350, 512 420 L 512 512 L 0 512 Z" fill="#ffffff" fill-opacity="0.1"/>
+
+  <!-- Hibiscus Flower -->
+  <g transform="translate(256, 256) scale(0.8)">
+    <!-- Petals -->
+    <g filter="url(#shadow)">
+      <path d="M0 0 C -50 -120, -130 -120, -150 -50 C -170 20, -100 80, 0 0" fill="#FF5252" transform="rotate(0)"/>
+      <path d="M0 0 C -50 -120, -130 -120, -150 -50 C -170 20, -100 80, 0 0" fill="#FF5252" transform="rotate(72)"/>
+      <path d="M0 0 C -50 -120, -130 -120, -150 -50 C -170 20, -100 80, 0 0" fill="#FF5252" transform="rotate(144)"/>
+      <path d="M0 0 C -50 -120, -130 -120, -150 -50 C -170 20, -100 80, 0 0" fill="#FF5252" transform="rotate(216)"/>
+      <path d="M0 0 C -50 -120, -130 -120, -150 -50 C -170 20, -100 80, 0 0" fill="#FF5252" transform="rotate(288)"/>
+    </g>
+    
+    <!-- Inner Highlights -->
+    <g>
+      <path d="M0 0 C -30 -80, -80 -80, -90 -30 C -100 10, -60 50, 0 0" fill="#FF8A80" transform="rotate(0) scale(0.7)"/>
+      <path d="M0 0 C -30 -80, -80 -80, -90 -30 C -100 10, -60 50, 0 0" fill="#FF8A80" transform="rotate(72) scale(0.7)"/>
+      <path d="M0 0 C -30 -80, -80 -80, -90 -30 C -100 10, -60 50, 0 0" fill="#FF8A80" transform="rotate(144) scale(0.7)"/>
+      <path d="M0 0 C -30 -80, -80 -80, -90 -30 C -100 10, -60 50, 0 0" fill="#FF8A80" transform="rotate(216) scale(0.7)"/>
+      <path d="M0 0 C -30 -80, -80 -80, -90 -30 C -100 10, -60 50, 0 0" fill="#FF8A80" transform="rotate(288) scale(0.7)"/>
+    </g>
+
+    <!-- Stamen (Pistil) -->
+    <path d="M0 0 Q 60 -60 100 -100" stroke="#FFCDD2" stroke-width="8" stroke-linecap="round" />
+    <circle cx="105" cy="-105" r="8" fill="#FFEB3B" />
+    <circle cx="90" cy="-90" r="6" fill="#FFEB3B" />
+    <circle cx="80" cy="-110" r="6" fill="#FFEB3B" />
+    
+    <!-- Center Dot -->
+    <circle cx="0" cy="0" r="15" fill="#D32F2F" />
+  </g>
+</svg>
