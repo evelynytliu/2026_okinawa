@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useTrip } from '@/context/TripContext';
-import { Lock, Unlock, User, Users, Database, RotateCcw, Loader2 } from 'lucide-react';
+import { Lock, Unlock, User, Users, Database, RotateCcw, Loader2, Share2, Download, X } from 'lucide-react';
 import styles from './page.module.css';
 import { FAMILIES, MEMBERS, ITINERARY, INITIAL_EXPENSES, LOCATION_DETAILS, SCHEDULE_PLAN, EXPENSE_CATEGORIES } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
@@ -11,6 +11,30 @@ export default function SettingsPage() {
     const [loading, setLoading] = useState(false);
     const [isSavingRate, setIsSavingRate] = useState(false);
     const [localRate, setLocalRate] = useState(jpyRate);
+
+    // PWA Install Prompt State
+    const [deferredPrompt, setDeferredPrompt] = useState(null);
+    const [isIOS, setIsIOS] = useState(false);
+    const [isChrome, setIsChrome] = useState(false);
+    const [isStandalone, setIsStandalone] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+
+    useEffect(() => {
+        setIsStandalone(window.matchMedia('(display-mode: standalone)').matches);
+        const userAgent = window.navigator.userAgent.toLowerCase();
+        setIsIOS(/iphone|ipad|ipod/.test(userAgent));
+        setIsChrome(/crios/.test(userAgent)); // Chrome on iOS
+        setIsMobile(/android|iphone|ipad|ipod/.test(userAgent));
+
+        const handleBeforeInstallPrompt = (e) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+        };
+
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    }, []);
 
     // Sync local rate with context rate when it loads
     useEffect(() => {
@@ -22,6 +46,18 @@ export default function SettingsPage() {
         await updateJpyRate(Number(localRate));
         setIsSavingRate(false);
         alert('匯率已更新！');
+    };
+
+    const handleInstallClick = async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                setDeferredPrompt(null);
+            }
+        } else if (isIOS) {
+            setShowIOSInstructions(!showIOSInstructions);
+        }
     };
 
     const handleFullReset = async () => {
@@ -107,6 +143,44 @@ export default function SettingsPage() {
     return (
         <div className="container" style={{ paddingTop: '2rem', paddingBottom: '6rem' }}>
             <h2 className={styles.pageTitle}>設定</h2>
+
+            {/* Install App Section (Mobile Only) */}
+            {isMobile && !isStandalone && (deferredPrompt || isIOS) && (
+                <div className={styles.installSection}>
+                    <div className={styles.installHeader}>
+                        <div>
+                            <div className={styles.installTitle}>安裝應用程式</div>
+                            <div className={styles.installDesc}>將此網頁加到主畫面，享受全螢幕體驗</div>
+                        </div>
+                    </div>
+
+                    <button className={styles.installBtn} onClick={handleInstallClick}>
+                        <Download size={20} />
+                        {isIOS ? (showIOSInstructions ? '隱藏教學' : '加到主畫面') : '加到主畫面'}
+                    </button>
+
+                    {showIOSInstructions && isIOS && (
+                        <div className={styles.iosInstructions}>
+                            <h5>{isChrome ? '加入主畫面 (Chrome)' : '加入主畫面 (Safari)'}</h5>
+                            <ol>
+                                {isChrome ? (
+                                    <>
+                                        <li>點擊右上角網址列的分享按鈕 <Share2 size={12} style={{ display: 'inline' }} /></li>
+                                        <li>捲動或點選「更多(...)」</li>
+                                        <li>點選「加入主畫面」</li>
+                                    </>
+                                ) : (
+                                    <>
+                                        <li>點擊瀏覽器下方的分享按鈕 <Share2 size={12} style={{ display: 'inline' }} /></li>
+                                        <li>往下滑動選單</li>
+                                        <li>點選「加入主畫面」</li>
+                                    </>
+                                )}
+                            </ol>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div className="card">
                 <div className={styles.settingItem}>
