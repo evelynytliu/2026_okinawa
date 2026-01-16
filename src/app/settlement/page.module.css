@@ -14,8 +14,28 @@
     padding: 0.5rem;
 }
 
+.toggleBtn {
+    margin-left: auto;
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 2px solid var(--primary);
+    background: transparent;
+    color: var(--primary);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.toggleBtnActive {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 10px rgba(46, 139, 153, 0.3);
+}
+
 .heroCard {
-    background: linear-gradient(135deg, #2e8b99 0%, #246d78 100%);
+    background: linear-gradient(135deg, #2E8B99 0%, #4299e1 100%);
     border-radius: var(--radius-lg);
     padding: 2rem;
     color: white;
@@ -23,22 +43,35 @@
     align-items: center;
     gap: 1.5rem;
     margin-bottom: 2rem;
-    box-shadow: 0 10px 20px rgba(46, 139, 153, 0.2);
+    box-shadow: 0 10px 30px rgba(46, 139, 153, 0.2);
+    position: relative;
+    overflow: hidden;
 }
 
 .heroIcon {
-    opacity: 0.8;
+    opacity: 0.9;
+    flex-shrink: 0;
+}
+
+.heroContent {
+    flex: 1;
+    z-index: 1;
 }
 
 .heroContent p {
-    font-size: 0.9rem;
+    margin: 0;
     opacity: 0.9;
-    margin-bottom: 0.2rem;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .heroContent h2 {
-    font-size: 2.2rem;
+    margin: 0.5rem 0 0 0;
+    font-size: 2.5rem;
     font-weight: 800;
+    letter-spacing: -0.5px;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .section {

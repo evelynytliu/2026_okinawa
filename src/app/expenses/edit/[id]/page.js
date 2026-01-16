@@ -2,14 +2,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Check, Loader2, Trash2 } from 'lucide-react';
-import { EXPENSE_CATEGORIES, FAMILIES, MEMBERS } from '@/lib/data';
+import { EXPENSE_CATEGORIES } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
 import { useTrip } from '@/context/TripContext';
 import styles from '../../add/page.module.css'; // Reuse add page styles
 
 export default function EditExpensePage() {
     const router = useRouter();
-    const { jpyRate } = useTrip();
+    const { jpyRate, members: MEMBERS, families: FAMILIES } = useTrip();
     const amountRef = useRef(null);
     const params = useParams();
     const [submitting, setSubmitting] = useState(false);

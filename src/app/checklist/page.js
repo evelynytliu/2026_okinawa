@@ -1,9 +1,9 @@
 "use client";
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Check, Trash2, Users, User, Briefcase, Shirt, Plug, FileText, CheckSquare, Smile, Edit2, X, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { MEMBERS, FAMILIES, ANALYSIS_GROUPS } from '@/lib/data';
+import { useTrip } from '@/context/TripContext'; // Dynamic Data
 import styles from './page.module.css';
 
 const CATEGORIES = [
@@ -44,10 +44,11 @@ export default function ChecklistPage() {
 
 function ChecklistContent() {
     const router = useRouter();
+    const { members, families } = useTrip(); // Use dynamic data
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('shared'); // 'shared' or 'individual'
-    const [activeUser, setActiveUser] = useState('ting'); // Default user
+    const [activeUser, setActiveUser] = useState(''); // Init empty, set in effect
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Add Item Form
@@ -56,6 +57,40 @@ function ChecklistContent() {
     const [editingId, setEditingId] = useState(null);
     const [editingText, setEditingText] = useState('');
     const [hideCompleted, setHideCompleted] = useState(false);
+
+    // Compute Groups dynamically (Same logic as AnalysisDashboard)
+    const checklistGroups = useMemo(() => {
+        let groups = [];
+        families.forEach(f => {
+            if (f.id === 'individuals') {
+                // Break down individuals
+                f.members.forEach(mid => {
+                    const mName = members[mid]?.name || mid;
+                    groups.push({
+                        id: 'g_' + mid, // Use g_ prefix for individual groups check
+                        name: mName,
+                        color: f.color
+                    });
+                });
+            } else {
+                groups.push({
+                    id: f.id,
+                    name: f.name,
+                    color: f.color
+                });
+            }
+        });
+        return groups;
+    }, [families, members]);
+
+    // Set default activeUser if not set or invalid
+    useEffect(() => {
+        if (checklistGroups.length > 0) {
+            if (!activeUser || !checklistGroups.find(g => g.id === activeUser)) {
+                setActiveUser(checklistGroups[0].id);
+            }
+        }
+    }, [checklistGroups, activeUser]);
 
     useEffect(() => {
         fetchItems();
@@ -130,6 +165,8 @@ function ChecklistContent() {
     const handleImport = async () => {
         if (!confirm('確定要匯入預設清單嗎？')) return;
         setLoading(true);
+        // If activeTab is shared, owner is 'public'.
+        // If activeTab is individual, owner is activeUser (the Group ID).
         const ownerId = activeTab === 'shared' ? 'public' : activeUser;
         const source = activeTab === 'shared' ? DEFAULT_ITEMS.shared : DEFAULT_ITEMS.individual;
 
@@ -247,7 +284,7 @@ function ChecklistContent() {
 
             {activeTab === 'individual' && (
                 <div className={styles.userSelector}>
-                    {ANALYSIS_GROUPS.map(g => (
+                    {checklistGroups.map(g => (
                         <button
                             key={g.id}
                             className={`${styles.userBtn} ${activeUser === g.id ? styles.activeUser : ''}`}
@@ -339,7 +376,7 @@ function ChecklistContent() {
                 <div className={styles.modalOverlay} onClick={() => setIsModalOpen(false)}>
                     <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
                         <h3 style={{ marginBottom: '1rem' }}>
-                            新增{activeTab === 'shared' ? '共用' : (ANALYSIS_GROUPS.find(g => g.id === activeUser)?.name + '的')}項目
+                            新增{activeTab === 'shared' ? '共用' : (checklistGroups.find(g => g.id === activeUser)?.name + '的')}項目
                         </h3>
                         <form onSubmit={handleAdd}>
                             <div className={styles.inputGroup}>

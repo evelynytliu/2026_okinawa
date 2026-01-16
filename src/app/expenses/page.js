@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, Coffee, Car, Home, ShoppingBag, Ticket, MoreHorizontal, ChevronDown, ChevronUp, X, User, Edit2, Check, PieChart, Wallet, Calendar, Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { FAMILIES, MEMBERS } from '@/lib/data';
+
+import { useTrip } from '@/context/TripContext';
 import styles from './page.module.css';
 
 const ICON_MAP = {
@@ -18,6 +19,7 @@ const ICON_MAP = {
 
 function ExpensesPageContent() {
     const router = useRouter();
+    const { members: MEMBERS, families: FAMILIES } = useTrip();
     const searchParams = useSearchParams();
     const filterType = searchParams.get('filter'); // 'unpaid' or null
 

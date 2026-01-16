@@ -2,7 +2,7 @@
 import React, { useState, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Check, Loader2, Users } from 'lucide-react';
-import { EXPENSE_CATEGORIES, FAMILIES, MEMBERS } from '@/lib/data';
+import { EXPENSE_CATEGORIES } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
 import { useTrip } from '@/context/TripContext';
 import styles from './page.module.css';
@@ -17,7 +17,7 @@ export default function AddExpensePage() {
 
 function AddExpensePageContent() {
     const router = useRouter();
-    const { jpyRate } = useTrip();
+    const { jpyRate, members: MEMBERS, families: FAMILIES } = useTrip();
     const amountRef = useRef(null);
     const searchParams = useSearchParams();
     const initialCat = searchParams.get('cat') || 'food';

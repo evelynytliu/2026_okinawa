@@ -4,13 +4,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Wallet, Check, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { FAMILIES, MEMBERS } from '@/lib/data';
+import { useTrip } from '@/context/TripContext';
 import styles from './page.module.css';
 
 export default function SettlementPage() {
     const router = useRouter();
+    const { members: MEMBERS, families: FAMILIES } = useTrip();
     const [expenses, setExpenses] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [includeUnpaid, setIncludeUnpaid] = useState(false);
 
     useEffect(() => {
         fetchExpenses();
@@ -53,6 +55,10 @@ export default function SettlementPage() {
         const payer = exp.payer_id;
         const beneficiaries = exp.beneficiaries || [];
         const isRepayment = exp.category === 'repayment';
+
+        // Fix: Skip expenses that have no payer (unpaid items) to maintain zero-sum balance
+        // Unless toggle is ON
+        if (!includeUnpaid && (!payer || payer === 'none')) return;
 
         if (isRepayment) {
             if (personBalances[payer]) {
@@ -102,7 +108,8 @@ export default function SettlementPage() {
             name: f.name,
             color: f.color,
             net: famNet,
-            members: f.id === 'individuals' ? members : []
+            // Fix: Always return member IDs so we can iterate them in the UI
+            members: f.members // Return the raw ID list from original data is safer/easier for the UI loop
         };
     });
 
@@ -112,10 +119,14 @@ export default function SettlementPage() {
     // Flat list for matching
     familyStats.forEach(fs => {
         if (fs.id === 'individuals') {
-            fs.members.forEach(m => {
-                const roundedNet = Math.round(m.net);
-                if (roundedNet > 0) creditors.push({ id: m.id, name: m.name, amount: roundedNet });
-                else if (roundedNet < 0) debtors.push({ id: m.id, name: m.name, amount: Math.abs(roundedNet) });
+            fs.members.forEach(mid => {
+                const stats = personBalances[mid];
+                const net = stats?.net || 0;
+                const roundedNet = Math.round(net);
+                const name = MEMBERS[mid]?.name || mid;
+
+                if (roundedNet > 0) creditors.push({ id: mid, name: name, amount: roundedNet });
+                else if (roundedNet < 0) debtors.push({ id: mid, name: name, amount: Math.abs(roundedNet) });
             });
         } else {
             const roundedNet = Math.round(fs.net);
@@ -124,10 +135,26 @@ export default function SettlementPage() {
         }
     });
 
-    // Calculate P2P Repayments
+    // Calculate P2P Repayments - Prioritized Banker Algorithm
     const suggestions = [];
-    const tempCreditors = creditors.map(c => ({ ...c }));
-    const tempDebtors = debtors.map(d => ({ ...d }));
+
+    // Sort debtors by amount descending (clear big debts first)
+    const tempDebtors = debtors.map(d => ({ ...d })).sort((a, b) => b.amount - a.amount);
+
+    // Split Creditors into "Main Bankers" (Ting/Lin or Family Names) and Others
+    // Ideally use IDs, but names work if they are consistent. 
+    // Data: 'Ting Family' -> '婷家', 'Lin Family' -> '琳家', 'Ting' -> '婷', 'Lin' -> '琳'
+    // Let's use flexible matching.
+    const isBanker = (c) => {
+        const n = c.name;
+        return n.includes('婷') || n.includes('琳');
+    };
+
+    const mainBankers = creditors.filter(c => isBanker(c)).map(c => ({ ...c })).sort((a, b) => b.amount - a.amount);
+    const otherCreditors = creditors.filter(c => !isBanker(c)).map(c => ({ ...c })).sort((a, b) => b.amount - a.amount);
+
+    // Combine them back, ensuring Bankers are processed FIRST
+    const tempCreditors = [...mainBankers, ...otherCreditors];
 
     let cIdx = 0;
     let dIdx = 0;
@@ -135,6 +162,11 @@ export default function SettlementPage() {
     while (cIdx < tempCreditors.length && dIdx < tempDebtors.length) {
         const creditor = tempCreditors[cIdx];
         const debtor = tempDebtors[dIdx];
+
+        // Skip tiny remaining amounts to avoid dust transactions (e.g. $1)
+        if (creditor.amount < 1) { cIdx++; continue; }
+        if (debtor.amount < 1) { dIdx++; continue; }
+
         const amount = Math.min(creditor.amount, debtor.amount);
 
         if (amount > 0) {
@@ -148,8 +180,8 @@ export default function SettlementPage() {
         creditor.amount -= amount;
         debtor.amount -= amount;
 
-        if (creditor.amount <= 0) cIdx++;
-        if (debtor.amount <= 0) dIdx++;
+        if (creditor.amount < 1) cIdx++;
+        if (debtor.amount < 1) dIdx++;
     }
 
     const [expandedId, setExpandedId] = useState(null);
@@ -157,7 +189,11 @@ export default function SettlementPage() {
     const renderMemberAudit = (mid) => {
         const logs = memberLogs[mid];
         const stats = personBalances[mid];
-        if (!logs || (logs.paidItems.length === 0 && logs.shareItems.length === 0)) return null;
+        // Only hide if absolutely no activity AND no balance (clean slate)
+        const hasActivity = logs && (logs.paidItems.length > 0 || logs.shareItems.length > 0);
+        const hasBalance = Math.round(stats.net) !== 0;
+
+        if (!hasActivity && !hasBalance) return null;
 
         return (
             <div key={mid} className={styles.auditGroup}>
@@ -202,7 +238,12 @@ export default function SettlementPage() {
                     <ArrowLeft size={24} />
                 </button>
                 <h3>待結清款 (內部債務)</h3>
-                <div style={{ width: 24 }}></div>
+                <button
+                    onClick={() => setIncludeUnpaid(!includeUnpaid)}
+                    className={`${styles.toggleBtn} ${includeUnpaid ? styles.toggleBtnActive : ''}`}
+                >
+                    {includeUnpaid ? '含預估支出' : '僅已付'}
+                </button>
             </header>
 
             <div className={styles.heroCard}>
@@ -213,9 +254,112 @@ export default function SettlementPage() {
                 </div>
             </div>
 
-            {suggestions.length > 0 && (
+            {/* Combined Debt Summary & Audit Section */}
+            <div className={styles.section}>
+                <h4 className={styles.sectionTitle}>應收 / 應付金額明細 ({includeUnpaid ? '預估總額' : '目前結算'})</h4>
+
+                <div className={styles.auditMenu}>
+                    {familyStats.filter(f => Math.round(f.net) !== 0 || f.id !== 'individuals').map((fs) => {
+                        // Logic for individual handling inside the main loop to keep order or separated?
+                        // The original code separated Families and Individuals (Individuals group had multiple people).
+                        // The Debt List flattened them.
+                        // To integrate, we should iterate over familyStats.
+
+                        if (fs.id === 'individuals') {
+                            // Render each individual separately
+                            // fs.members is now a list of IDs (e.g. ['peng', 'mei'])
+                            return fs.members.map(mid => {
+                                const stats = personBalances[mid];
+                                const net = stats?.net || 0;
+                                if (Math.round(net) === 0) return null; // Skip zero balance
+
+                                const isExpanded = expandedId === mid;
+                                const amount = Math.abs(Math.round(net));
+                                const isPlus = net > 0;
+                                const name = MEMBERS[mid]?.name || mid;
+
+                                return (
+                                    <div key={mid} className={styles.auditAccordion}>
+                                        <button
+                                            className={`${styles.debtItem} ${styles.groupToggle} ${isExpanded ? styles.activeToggle : ''}`}
+                                            onClick={() => setExpandedId(isExpanded ? null : mid)}
+                                            style={{ width: '100%', border: 'none', background: 'white', borderBottom: '1px solid #f1f5f9' }}
+                                        >
+                                            <div className={styles.debtorInfo}>
+                                                <div className={styles.avatar} style={{
+                                                    background: isPlus ? '#e6fffa' : '#fff5f5',
+                                                    color: isPlus ? '#2e8b99' : '#e53e3e'
+                                                }}>
+                                                    {isPlus ? '收' : '欠'}
+                                                </div>
+                                                <span className={styles.groupName}>{name}</span>
+                                            </div>
+
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <span className={isPlus ? styles.plusAmount : styles.minusAmount}>
+                                                    {isPlus ? '+' : '-'}${amount.toLocaleString()}
+                                                </span>
+                                                <ChevronRight className={isExpanded ? styles.chevronOpen : ''} size={18} color="#ccc" />
+                                            </div>
+                                        </button>
+
+                                        {isExpanded && (
+                                            <div className={styles.auditContainer + ' fade-in'} style={{ padding: '0 1rem 1rem 1rem', background: '#fafafa', borderBottom: '1px solid #eee' }}>
+                                                {renderMemberAudit(mid)}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            });
+                        } else {
+                            // Family Row
+                            if (Math.round(fs.net) === 0) return null; // Skip zero balance families in summary
+
+                            const isExpanded = expandedId === fs.id;
+                            const amount = Math.abs(Math.round(fs.net));
+                            const isPlus = fs.net > 0;
+
+                            return (
+                                <div key={fs.id} className={styles.auditAccordion}>
+                                    <button
+                                        className={`${styles.debtItem} ${styles.groupToggle} ${isExpanded ? styles.activeToggle : ''}`}
+                                        onClick={() => setExpandedId(isExpanded ? null : fs.id)}
+                                        style={{ width: '100%', border: 'none', background: 'white', borderBottom: '1px solid #f1f5f9', borderLeft: `4px solid ${fs.color}` }}
+                                    >
+                                        <div className={styles.debtorInfo}>
+                                            <div className={styles.avatar} style={{
+                                                background: isPlus ? '#e6fffa' : '#fff5f5',
+                                                color: isPlus ? '#2e8b99' : '#e53e3e'
+                                            }}>
+                                                {isPlus ? '收' : '欠'}
+                                            </div>
+                                            <span className={styles.groupName}>{fs.name}</span>
+                                        </div>
+
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <span className={isPlus ? styles.plusAmount : styles.minusAmount}>
+                                                {isPlus ? '+' : '-'}${amount.toLocaleString()}
+                                            </span>
+                                            <ChevronRight className={isExpanded ? styles.chevronOpen : ''} size={18} color="#ccc" />
+                                        </div>
+                                    </button>
+
+                                    {isExpanded && (
+                                        <div className={styles.auditContainer + ' fade-in'} style={{ padding: '0 1rem 1rem 1rem', background: '#fafafa', borderBottom: '1px solid #eee' }}>
+                                            {fs.members.map(mid => renderMemberAudit(mid))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        }
+                    })}
+                </div>
+            </div>
+
+            {/* Only show P2P suggestions when strictly balanced (Only Paid) */}
+            {!includeUnpaid && suggestions.length > 0 && (
                 <div className={styles.section}>
-                    <h4 className={styles.sectionTitle}>建議還款方式</h4>
+                    <h4 className={styles.sectionTitle}>建議還款方式 (已墊付部分)</h4>
                     <div className={styles.suggestionList}>
                         {suggestions.map((s, i) => (
                             <div key={i} className={styles.suggestionItem}>
@@ -233,121 +377,15 @@ export default function SettlementPage() {
                 </div>
             )}
 
-            <div className={styles.section}>
-                <h4 className={styles.sectionTitle}>應收 / 應付金額 (結算)</h4>
-                <div className={styles.debtList}>
-                    {familyStats.filter(f => Math.round(f.net) !== 0).map((fs, i) => {
-                        const amount = Math.abs(Math.round(fs.net));
-                        const isPlus = fs.net > 0;
-
-                        if (fs.id === 'individuals') {
-                            return fs.members.filter(m => Math.round(m.net) !== 0).map((m, j) => {
-                                const mAmount = Math.abs(Math.round(m.net));
-                                return (
-                                    <div key={m.id} className={styles.debtItem}>
-                                        <div className={styles.debtorInfo}>
-                                            <div className={styles.avatar} style={{
-                                                background: m.net > 0 ? '#e6fffa' : '#fff5f5',
-                                                color: m.net > 0 ? '#2e8b99' : '#e53e3e'
-                                            }}>
-                                                {m.net > 0 ? '收' : '欠'}
-                                            </div>
-                                            <span>{m.name}</span>
-                                        </div>
-                                        <span className={m.net > 0 ? styles.plusAmount : styles.minusAmount}>
-                                            {m.net > 0 ? '+' : '-'}${mAmount.toLocaleString()}
-                                        </span>
-                                    </div>
-                                );
-                            });
-                        }
-
-                        return (
-                            <div key={fs.id} className={styles.debtItem}>
-                                <div className={styles.debtorInfo}>
-                                    <div className={styles.avatar} style={{
-                                        background: isPlus ? '#e6fffa' : '#fff5f5',
-                                        color: isPlus ? '#2e8b99' : '#e53e3e'
-                                    }}>
-                                        {isPlus ? '收' : '欠'}
-                                    </div>
-                                    <span>{fs.name}</span>
-                                </div>
-                                <span className={isPlus ? styles.plusAmount : styles.minusAmount}>
-                                    {isPlus ? '+' : '-'}${amount.toLocaleString()}
-                                </span>
-                            </div>
-                        );
-                    })}
+            {includeUnpaid && (
+                <div className={styles.section}>
+                    <h4 className={styles.sectionTitle}>⚠️ 包含預估支出模式</h4>
+                    <div className={styles.empty} style={{ background: '#fff3cd', color: '#856404', borderRadius: '8px' }}>
+                        此模式顯示「預計總花費欠款」，因部分款項尚未實際付款，故無法計算互相還款金額。<br />
+                        若要結清內部代墊款，請切換至「僅已付」模式。
+                    </div>
                 </div>
-            </div>
-
-            {/* Audit Details Section */}
-            <div className={styles.section}>
-                <h4 className={styles.sectionTitle}>查帳明細 (為什麼是這個數字?)</h4>
-
-                <div className={styles.auditMenu}>
-                    {FAMILIES.map(f => {
-                        if (f.id !== 'individuals') {
-                            const isExpanded = expandedId === f.id;
-                            let famNet = 0;
-                            f.members.forEach(mid => famNet += personBalances[mid].net);
-
-                            return (
-                                <div key={f.id} className={styles.auditAccordion}>
-                                    <button
-                                        className={`${styles.groupToggle} ${isExpanded ? styles.activeToggle : ''}`}
-                                        onClick={() => setExpandedId(isExpanded ? null : f.id)}
-                                        style={{ borderLeftColor: f.color }}
-                                    >
-                                        <div className={styles.groupInfo}>
-                                            <span className={styles.groupName}>{f.name}</span>
-                                            <span className={famNet >= 0 ? styles.positiveText : styles.negativeText}>
-                                                結餘: {Math.round(famNet).toLocaleString()}
-                                            </span>
-                                        </div>
-                                        <ChevronRight className={isExpanded ? styles.chevronOpen : ''} size={18} />
-                                    </button>
-
-                                    {isExpanded && (
-                                        <div className={styles.auditContainer + ' fade-in'}>
-                                            {f.members.map(mid => renderMemberAudit(mid))}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        } else {
-                            // Individuals
-                            return f.members.map(mid => {
-                                const isExpanded = expandedId === mid;
-                                const stats = personBalances[mid];
-                                return (
-                                    <div key={mid} className={styles.auditAccordion}>
-                                        <button
-                                            className={`${styles.groupToggle} ${isExpanded ? styles.activeToggle : ''}`}
-                                            onClick={() => setExpandedId(isExpanded ? null : mid)}
-                                        >
-                                            <div className={styles.groupInfo}>
-                                                <span className={styles.groupName}>{MEMBERS[mid].name} (個人)</span>
-                                                <span className={stats.net >= 0 ? styles.positiveText : styles.negativeText}>
-                                                    結餘: {Math.round(stats.net).toLocaleString()}
-                                                </span>
-                                            </div>
-                                            <ChevronRight className={isExpanded ? styles.chevronOpen : ''} size={18} />
-                                        </button>
-
-                                        {isExpanded && (
-                                            <div className={styles.auditContainer + ' fade-in'}>
-                                                {renderMemberAudit(mid)}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            });
-                        }
-                    })}
-                </div>
-            </div>
+            )}
 
             <div className={styles.footerNote}>
                 <p>* 結餘 = (我墊付的總額) - (我應出的總額)。</p>

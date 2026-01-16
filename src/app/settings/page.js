@@ -3,11 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { useTrip } from '@/context/TripContext';
 import { Lock, Unlock, User, Users, Database, RotateCcw, Loader2, Share2, Download, X } from 'lucide-react';
 import styles from './page.module.css';
-import { FAMILIES, MEMBERS, ITINERARY, INITIAL_EXPENSES, LOCATION_DETAILS, SCHEDULE_PLAN, EXPENSE_CATEGORIES } from '@/lib/data';
+import { ITINERARY, INITIAL_EXPENSES, LOCATION_DETAILS, SCHEDULE_PLAN, EXPENSE_CATEGORIES } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
 
 export default function SettingsPage() {
-    const { isEditMode, toggleEditMode, jpyRate, updateJpyRate } = useTrip();
+    const { isEditMode, toggleEditMode, jpyRate, updateJpyRate, members, families, updateMembersConfig } = useTrip();
     const [loading, setLoading] = useState(false);
     const [isSavingRate, setIsSavingRate] = useState(false);
     const [localRate, setLocalRate] = useState(jpyRate);
@@ -58,6 +58,100 @@ export default function SettingsPage() {
         } else if (isIOS) {
             setShowIOSInstructions(!showIOSInstructions);
         }
+    };
+
+    // State for Member Editing Modal
+    const [editingMember, setEditingMember] = useState(null); // { id, name, familyId }
+
+    // Open Modal (Centered)
+    const handleMemberClick = (mid, e) => {
+        const m = members[mid];
+
+        setEditingMember({
+            ...m,
+            id: mid,
+            popoverStyle: {
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '320px',
+                maxWidth: '85%',
+                zIndex: 1000,
+                background: 'white',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                borderRadius: '16px',
+                padding: '24px',
+            }
+        });
+    };
+
+    const handleSaveMember = () => {
+        if (!editingMember || !editingMember.name) return;
+
+        const { id, name, familyId } = editingMember;
+
+        // CASE 1: ADD NEW MEMBER
+        if (id === 'new') {
+            const newId = 'm_' + Date.now();
+            const newMemberObj = { id: newId, name, familyId };
+
+            const newMembers = { ...members, [newId]: newMemberObj };
+            const newFamilies = families.map(f => {
+                if (f.id === familyId) {
+                    return { ...f, members: [...f.members, newId] };
+                }
+                return f;
+            });
+
+            updateMembersConfig(newMembers, newFamilies);
+        }
+        // CASE 2: EDIT EXISTING MEMBER
+        else {
+            const oldFamilyId = members[id]?.familyId;
+            const newMembers = {
+                ...members,
+                [id]: { ...members[id], name, familyId }
+            };
+
+            let newFamilies = [...families];
+            if (oldFamilyId && oldFamilyId !== familyId) {
+                newFamilies = newFamilies.map(f => {
+                    if (f.id === oldFamilyId) { // Remove from old
+                        return { ...f, members: f.members.filter(m => m !== id) };
+                    }
+                    if (f.id === familyId) { // Add to new
+                        return { ...f, members: [...f.members, id] };
+                    }
+                    return f;
+                });
+            }
+            updateMembersConfig(newMembers, newFamilies);
+        }
+
+        setEditingMember(null);
+    };
+
+    const handleAddMember = (familyId) => {
+        // Open Modal for New Member
+        setEditingMember({
+            id: 'new',
+            name: '',
+            familyId: familyId,
+            popoverStyle: {
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '320px',
+                maxWidth: '85%',
+                zIndex: 1000,
+                background: 'white',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                borderRadius: '16px',
+                padding: '24px',
+            }
+        });
     };
 
     const handleFullReset = async () => {
@@ -120,6 +214,9 @@ export default function SettingsPage() {
 
             // 4. Insert Expenses (Only if requested)
             if (includeExpenses) {
+                // Warning: INITIAL_EXPENSES uses static beneficiary IDs. 
+                // If dynamic members changed IDs, this might break. 
+                // But reset usually implies full reset.
                 const expPayload = INITIAL_EXPENSES.map(exp => ({
                     ...exp,
                     amount: Number(exp.amount),
@@ -223,48 +320,46 @@ export default function SettingsPage() {
                 </div>
             </div>
 
-            {/* <div className="card">
+            <div className="card">
                 <div className={styles.settingItem}>
                     <div className={styles.settingInfo}>
-                        <h4>資料庫初始化與更新</h4>
-                        <p>更新行程或重置所有資料</p>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
-                        <button
-                            className={styles.actionBtn}
-                            onClick={handleUpdateMasterData}
-                            disabled={loading}
-                            style={{ background: '#2E8B99', color: 'white', border: 'none' }}
-                        >
-                            {loading ? <Loader2 className={styles.spin} size={18} /> : <Database size={18} />}
-                            <span>僅更新行程 (保留記帳)</span>
-                        </button>
-
-                        <button
-                            className={styles.actionBtn}
-                            onClick={handleFullReset}
-                            disabled={loading}
-                            style={{ borderColor: '#ef4444', color: '#ef4444' }}
-                        >
-                            {loading ? <Loader2 className={styles.spin} size={18} /> : <RotateCcw size={18} />}
-                            <span>重置所有 (含刪除記帳)</span>
-                        </button>
+                        <h3>成員名單管理</h3>
+                        <p>點擊成員名稱可修改，點擊群組右上角可新增</p>
                     </div>
                 </div>
-            </div> */}
 
-            <div className="card">
-                <h3>成員名單</h3>
                 <div className={styles.familyList}>
-                    {FAMILIES.map(family => (
+                    {families.map(family => (
                         <div key={family.id} className={styles.familyGroup}>
-                            <div className={styles.familyHeader} style={{ borderColor: family.color }}>
-                                <Users size={16} color={family.color} />
-                                <span>{family.name}</span>
+                            <div className={styles.familyHeader} style={{ borderColor: family.color, displayName: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {family.id === 'individuals' ? (
+                                        <User size={16} color={family.color} />
+                                    ) : (
+                                        <Users size={16} color={family.color} />
+                                    )}
+                                    <span>
+                                        {family.name}
+                                        {family.id === 'individuals' && <span style={{ fontSize: '0.8em', color: '#999', fontWeight: 'normal', marginLeft: 4 }}>(多位單獨成員)</span>}
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={() => handleAddMember(family.id)}
+                                    style={{ fontSize: '0.8rem', padding: '4px 8px', borderRadius: '12px', border: '1px solid #ddd', background: 'white', color: '#666' }}
+                                >
+                                    + 新增
+                                </button>
                             </div>
                             <div className={styles.members}>
                                 {family.members.map(memberId => (
-                                    <span key={memberId} className={styles.memberTag}>{MEMBERS[memberId]?.name || memberId}</span>
+                                    <button
+                                        key={memberId}
+                                        className={styles.memberTag}
+                                        onClick={(e) => handleMemberClick(memberId, e)}
+                                        style={{ border: 'none', cursor: 'pointer' }}
+                                    >
+                                        {members[memberId]?.name || memberId}
+                                    </button>
                                 ))}
                             </div>
                         </div>
@@ -272,9 +367,80 @@ export default function SettingsPage() {
                 </div>
             </div>
 
+
+            {/* Modal Overlay */}
+            {editingMember && (
+                <div
+                    style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 990, background: 'rgba(0,0,0,0.5)' }}
+                    onClick={() => setEditingMember(null)}
+                />
+            )}
+
+            {/* Popover for Editing Member */}
+            {editingMember && (
+                <div
+                    style={editingMember.popoverStyle}
+                    onClick={e => e.stopPropagation()}
+                >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                        <h3 style={{ margin: 0 }}>{editingMember.id === 'new' ? '新增成員' : '編輯成員'}</h3>
+                        <button onClick={() => setEditingMember(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+                    </div>
+
+                    <div className={styles.inputGroup}>
+                        <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}>名稱</label>
+                        <input
+                            value={editingMember.name}
+                            onChange={e => setEditingMember(prev => ({ ...prev, name: e.target.value }))}
+                            className={styles.input}
+                            autoFocus
+                        />
+                    </div>
+
+                    <div className={styles.inputGroup} style={{ marginTop: 16 }}>
+                        <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}>所屬家庭</label>
+                        <select
+                            value={editingMember.familyId}
+                            onChange={e => setEditingMember(prev => ({ ...prev, familyId: e.target.value }))}
+                            className={styles.select}
+                            style={{
+                                width: '100%',
+                                padding: '8px',
+                                borderRadius: '8px',
+                                border: '1px solid #ddd',
+                                fontSize: '1rem'
+                            }}
+                        >
+                            {families.map(f => (
+                                <option key={f.id} value={f.id}>
+                                    {f.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                        <button
+                            onClick={() => setEditingMember(null)}
+                            style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}
+                        >
+                            取消
+                        </button>
+                        <button
+                            onClick={handleSaveMember}
+                            style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#0070f3', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}
+                        >
+                            {editingMember.id === 'new' ? '新增' : '儲存'}
+                        </button>
+                    </div>
+                </div>
+
+            )
+            }
+
             <div className={styles.footer}>
-                <p>App Version 1.2.0 (Full Data)</p>
+                <p>App Version 1.3.0 (Members Management)</p>
             </div>
-        </div>
+        </div >
     );
 }

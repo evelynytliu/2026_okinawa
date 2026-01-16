@@ -1,11 +1,12 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { MEMBERS, ANALYSIS_GROUPS } from '@/lib/data';
-import { X, ChevronRight, DollarSign, Wallet } from 'lucide-react';
+import { useTrip } from '@/context/TripContext';
+import { X, ChevronRight } from 'lucide-react';
 import styles from './AnalysisDashboard.module.css';
 
 export default function AnalysisDashboard() {
+    const { members, families } = useTrip();
     const [expenses, setExpenses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedGroup, setSelectedGroup] = useState(null);
@@ -36,25 +37,58 @@ export default function AnalysisDashboard() {
         }
     };
 
-    // Calculate stats for each group
-    const groupStats = ANALYSIS_GROUPS.map(group => {
-        let totalShare = 0;
-
-        expenses.forEach(exp => {
-            const amt = Number(exp.amount) || 0;
-            const beneficiaries = exp.beneficiaries || [];
-            if (beneficiaries.length > 0) {
-                const perPerson = amt / beneficiaries.length;
-                // Check how many members of this group are in the beneficiary list
-                group.members.forEach(m => {
-                    if (beneficiaries.includes(m)) {
-                        totalShare += perPerson;
-                    }
+    // Construct Analysis Groups dynamically
+    const analysisGroups = useMemo(() => {
+        let groups = [];
+        families.forEach(f => {
+            if (f.id === 'individuals') {
+                // Break down individuals into single-person groups
+                f.members.forEach(mid => {
+                    const mName = members[mid]?.name || mid;
+                    groups.push({
+                        id: 'g_' + mid,
+                        name: mName,
+                        members: [mid],
+                        color: f.color
+                    });
+                });
+            } else {
+                // Keep families as whole groups
+                groups.push({
+                    id: f.id,
+                    name: f.name,
+                    members: f.members,
+                    color: f.color
                 });
             }
         });
-        return { ...group, totalShare };
-    });
+        return groups;
+    }, [families, members]);
+
+    // Calculate stats for each group
+    const groupStats = useMemo(() => {
+        return analysisGroups.map(group => {
+            let totalShare = 0;
+
+            expenses.forEach(exp => {
+                // CRITICAL FIX: Skip Repayments
+                if (exp.category === 'repayment') return;
+
+                const amt = Number(exp.amount) || 0;
+                const beneficiaries = exp.beneficiaries || [];
+                if (beneficiaries.length > 0) {
+                    const perPerson = amt / beneficiaries.length;
+                    // Check how many members of this group are in the beneficiary list
+                    group.members.forEach(m => {
+                        if (beneficiaries.includes(m)) {
+                            totalShare += perPerson;
+                        }
+                    });
+                }
+            });
+            return { ...group, totalShare };
+        });
+    }, [analysisGroups, expenses]);
 
     const openModal = (group) => {
         setSelectedGroup(group);
@@ -69,6 +103,9 @@ export default function AnalysisDashboard() {
         if (!group) return [];
         const relevant = [];
         expenses.forEach(exp => {
+            // CRITICAL FIX: Skip Repayments
+            if (exp.category === 'repayment') return;
+
             const beneficiaries = exp.beneficiaries || [];
             // Find how many members of this group are involved
             const involvedMembers = group.members.filter(m => beneficiaries.includes(m));
@@ -82,7 +119,7 @@ export default function AnalysisDashboard() {
                     ...exp,
                     groupCost,
                     involvedCount: involvedMembers.length,
-                    involvedNames: involvedMembers.map(id => MEMBERS[id]?.name).join(', ')
+                    involvedNames: involvedMembers.map(id => members[id]?.name).join(', ')
                 });
             }
         });
@@ -130,7 +167,7 @@ export default function AnalysisDashboard() {
                                             <span className={styles.itemCost}>-${Math.round(item.groupCost).toLocaleString()}</span>
                                         </div>
                                         <div className={styles.itemMeta}>
-                                            {new Date(item.date).toLocaleDateString()} • 先付: {MEMBERS[item.payer_id]?.name || item.payer_id}
+                                            {new Date(item.date).toLocaleDateString()} • 先付: {members[item.payer_id]?.name || item.payer_id}
                                         </div>
                                         <div className={styles.itemInvolved}>
                                             分攤成員: {item.involvedNames} ({item.involvedCount}人)
