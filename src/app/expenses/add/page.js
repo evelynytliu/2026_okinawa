@@ -6,6 +6,7 @@ import { EXPENSE_CATEGORIES } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
 import { useTrip } from '@/context/TripContext';
 import styles from './page.module.css';
+import CalculatorKeypad from '@/components/calculator/CalculatorKeypad';
 
 export default function AddExpensePage() {
     return (
@@ -24,6 +25,7 @@ function AddExpensePageContent() {
     const [submitting, setSubmitting] = useState(false);
     const [currency, setCurrency] = useState('TWD'); // TWD or JPY
     const [displayAmount, setDisplayAmount] = useState(''); // Raw input
+    const [showKeypad, setShowKeypad] = useState(false);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -151,14 +153,14 @@ function AddExpensePageContent() {
                             <button
                                 type="button"
                                 className={`${styles.currBtn} ${currency === 'TWD' ? styles.activeCurr : ''}`}
-                                onClick={() => { setCurrency('TWD'); amountRef.current?.focus(); }}
+                                onClick={() => { setCurrency('TWD'); }}
                             >
                                 台幣
                             </button>
                             <button
                                 type="button"
                                 className={`${styles.currBtn} ${currency === 'JPY' ? styles.activeCurr : ''}`}
-                                onClick={() => { setCurrency('JPY'); amountRef.current?.focus(); }}
+                                onClick={() => { setCurrency('JPY'); }}
                             >
                                 日幣
                             </button>
@@ -170,32 +172,12 @@ function AddExpensePageContent() {
                             type="text"
                             placeholder="0"
                             value={displayAmount}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                if (val.endsWith('=')) {
-                                    const expression = val.slice(0, -1);
-                                    try {
-                                        if (/^[0-9+\-*/.() ]+$/.test(expression)) {
-                                            const result = new Function('return ' + expression)();
-                                            if (isFinite(result)) {
-                                                setDisplayAmount(Math.round(result * 100) / 100 + '');
-                                            }
-                                        }
-                                    } catch (err) { }
-                                } else {
-                                    if (/^[0-9+\-*/.() ]*$/.test(val)) {
-                                        setDisplayAmount(val);
-                                    }
-                                }
-                            }}
+                            readOnly
+                            inputMode="none"
+                            onClick={() => setShowKeypad(true)}
                             className={styles.amountInput}
-                            inputMode="decimal"
-                            autoFocus
                             required
                         />
-                        <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: 4, textAlign: 'right' }}>
-                            💡 支援算式輸入 (如 900/3=)
-                        </div>
                         {currency === 'JPY' && !isNaN(Number(displayAmount)) && displayAmount && (
                             <div className={styles.conversionPreview}>
                                 ≈ <span>TWD ${finalTwdAmount.toLocaleString()}</span>
@@ -359,6 +341,15 @@ function AddExpensePageContent() {
                     <span>{submitting ? '儲存中...' : '確認儲存'}</span>
                 </button>
             </form>
+
+            {showKeypad && (
+                <CalculatorKeypad
+                    initialValue={displayAmount}
+                    onValueChange={setDisplayAmount}
+                    onConfirm={() => setShowKeypad(false)}
+                    onClose={() => setShowKeypad(false)}
+                />
+            )}
         </div>
     );
 }

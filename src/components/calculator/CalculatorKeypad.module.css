@@ -1,0 +1,128 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index: 99999;
+    /* Ensure it covers bottom nav */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.container {
+    background-color: #fff;
+    border-radius: 20px 20px 0 0;
+    padding: 16px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    /* Handle iPhone home bar */
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 0 8px;
+}
+
+.display {
+    width: 100%;
+    font-size: 2rem;
+    font-weight: 600;
+    text-align: right;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: #1e293b;
+    margin-bottom: 4px;
+}
+
+.subtext {
+    text-align: right;
+    color: #64748b;
+    font-size: 0.9rem;
+    height: 20px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.btn {
+    height: 60px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s active;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btnNum {
+    background-color: #f1f5f9;
+    color: #334155;
+}
+
+.btnNum:active {
+    background-color: #e2e8f0;
+}
+
+.btnOp {
+    background-color: #e0f2fe;
+    color: #0284c7;
+    font-weight: 600;
+}
+
+.btnOp:active {
+    background-color: #bae6fd;
+}
+
+.btnAction {
+    background-color: #fee2e2;
+    color: #ef4444;
+}
+
+.btnAction:active {
+    background-color: #fecaca;
+}
+
+.btnSubmit {
+    grid-column: span 2;
+    background-color: #10b981;
+    color: white;
+}
+
+.btnSubmit:active {
+    background-color: #059669;
+}
+
+.btnClose {
+    border: none;
+    background: none;
+    color: #94a3b8;
+    cursor: pointer;
+}

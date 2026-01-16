@@ -6,6 +6,7 @@ import { EXPENSE_CATEGORIES } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
 import { useTrip } from '@/context/TripContext';
 import styles from '../../add/page.module.css'; // Reuse add page styles
+import CalculatorKeypad from '@/components/calculator/CalculatorKeypad';
 
 export default function EditExpensePage() {
     const router = useRouter();
@@ -16,6 +17,7 @@ export default function EditExpensePage() {
     const [loading, setLoading] = useState(true);
     const [currency, setCurrency] = useState('TWD');
     const [displayAmount, setDisplayAmount] = useState('');
+    const [showKeypad, setShowKeypad] = useState(false);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -199,14 +201,14 @@ export default function EditExpensePage() {
                             <button
                                 type="button"
                                 className={`${styles.currBtn} ${currency === 'TWD' ? styles.activeCurr : ''}`}
-                                onClick={() => { setCurrency('TWD'); amountRef.current?.focus(); }}
+                                onClick={() => { setCurrency('TWD'); }}
                             >
                                 台幣
                             </button>
                             <button
                                 type="button"
                                 className={`${styles.currBtn} ${currency === 'JPY' ? styles.activeCurr : ''}`}
-                                onClick={() => { setCurrency('JPY'); amountRef.current?.focus(); }}
+                                onClick={() => { setCurrency('JPY'); }}
                             >
                                 日幣
                             </button>
@@ -218,37 +220,12 @@ export default function EditExpensePage() {
                             type="text"
                             placeholder="0"
                             value={displayAmount}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                // Simple calculator logic
-                                if (val.endsWith('=')) {
-                                    const expression = val.slice(0, -1);
-                                    try {
-                                        // Allow only safe characters
-                                        if (/^[0-9+\-*/.() ]+$/.test(expression)) {
-                                            const result = new Function('return ' + expression)();
-                                            if (isFinite(result)) {
-                                                // Round to sensible precision (e.g. 1 decimal if needed, usually int for expenses)
-                                                setDisplayAmount(Math.round(result * 100) / 100 + '');
-                                            }
-                                        }
-                                    } catch (err) {
-                                        // Ignore calc errors
-                                    }
-                                } else {
-                                    // Allow typing numbers and math operators
-                                    if (/^[0-9+\-*/.() ]*$/.test(val)) {
-                                        setDisplayAmount(val);
-                                    }
-                                }
-                            }}
+                            readOnly
+                            inputMode="none"
+                            onClick={() => setShowKeypad(true)}
                             className={styles.amountInput}
-                            inputMode="decimal"
                             required
                         />
-                        <div style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: 4, textAlign: 'right' }}>
-                            💡 支援算式輸入 (如 900/3=)
-                        </div>
                         {currency === 'JPY' && !isNaN(Number(displayAmount)) && displayAmount && (
                             <div className={styles.conversionPreview}>
                                 ≈ <span>TWD ${finalTwdAmount.toLocaleString()}</span>
@@ -414,6 +391,15 @@ export default function EditExpensePage() {
                     <span>{submitting ? '更新儲存' : '確認修改'}</span>
                 </button>
             </form>
+
+            {showKeypad && (
+                <CalculatorKeypad
+                    initialValue={displayAmount}
+                    onValueChange={setDisplayAmount}
+                    onConfirm={() => setShowKeypad(false)}
+                    onClose={() => setShowKeypad(false)}
+                />
+            )}
         </div>
     );
 }
