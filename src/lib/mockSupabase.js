@@ -1,7 +1,7 @@
 
 import { INITIAL_EXPENSES } from './data';
 
-const STORAGE_KEY = 'demo_db_v2'; // Bump version to clear old single-table data
+const STORAGE_KEY = 'demo_db_mario'; // Bump version to clear old single-table data
 
 class MockQueryBuilder {
     constructor(data, onUpdate) {
@@ -136,8 +136,41 @@ class MockSupabaseClient {
     }
 
     _loadDb() {
-        // Return safe default if server-side
-        const defaultDb = { expenses: [...INITIAL_EXPENSES] };
+        // Mario Theme Data
+        const MARIO_MEMBERS = {
+            mario: { id: "mario", name: "瑪利歐", familyId: "mario_fam" },
+            luigi: { id: "luigi", name: "路易吉", familyId: "mario_fam" },
+            peach: { id: "peach", name: "碧姬", familyId: "peach_fam" },
+            toad: { id: "toad", name: "奇諾比奧", familyId: "peach_fam" },
+            yoshi: { id: "yoshi", name: "耀西", familyId: "others" },
+            bowser: { id: "bowser", name: "庫巴", familyId: "others" }
+        };
+
+        const MARIO_FAMILIES = [
+            { id: "mario_fam", name: "瑪利歐家", members: ["mario", "luigi"], color: "#E52521" },
+            { id: "peach_fam", name: "城堡組", members: ["peach", "toad"], color: "#F09CEA" },
+            { id: "others", name: "其他夥伴", members: ["yoshi", "bowser"], color: "#45B32D" }
+        ];
+
+        const MARIO_EXPENSES = [
+            { title: "蘑菇王國住宿", amount: 15000, category: "accommodation", payer_id: "peach", date: "2026-02-04", beneficiaries: ["mario", "luigi", "peach", "toad"], is_paid: true },
+            { title: "卡丁車租賃", amount: 8000, category: "transport", payer_id: "mario", date: "2026-02-05", beneficiaries: ["mario", "luigi", "yoshi", "bowser"], is_paid: false },
+            { title: "能量星星", amount: 5000, category: "shopping", payer_id: "mario", date: "2026-02-06", beneficiaries: ["mario"], is_paid: true },
+            { title: "庫巴城堡門票", amount: 12000, category: "tickets", payer_id: "bowser", date: "2026-02-07", beneficiaries: Object.keys(MARIO_MEMBERS), is_paid: true },
+        ];
+
+        // Safe default
+        const defaultDb = {
+            expenses: MARIO_EXPENSES.map(e => ({ ...e, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() })),
+            app_settings: [
+                { key: 'members_config', value: { members: MARIO_MEMBERS, families: MARIO_FAMILIES } }
+            ],
+            // Add minimal itinerary for demo to avoid "No Data" state if possible, or user can import.
+            // But let's leave itinerary empty or simple to encourage exploration.
+            itinerary_days: [],
+            itinerary_items: [],
+            locations: []
+        };
 
         if (typeof window === 'undefined') return defaultDb;
 
