@@ -1,7 +1,7 @@
 
 import { INITIAL_EXPENSES } from './data';
 
-const STORAGE_KEY = 'demo_db_mario'; // Bump version to clear old single-table data
+const STORAGE_KEY = 'demo_db_mario_v2'; // Bump version to clear old single-table data
 
 class MockQueryBuilder {
     constructor(data, onUpdate) {
@@ -159,17 +159,38 @@ class MockSupabaseClient {
             { title: "庫巴城堡門票", amount: 12000, category: "tickets", payer_id: "bowser", date: "2026-02-07", beneficiaries: Object.keys(MARIO_MEMBERS), is_paid: true },
         ];
 
+        // Mario Itinerary Mock
+        const MARIO_LOCATIONS = [
+            { id: 'loc1', name: "碧姬公主城堡", type: 'visual', details: "蘑菇王國的中心，非常華麗。", img_url: "https://mario.wiki.gallery/images/thumb/7/75/PeachCastle_Odyssey.jpg/1200px-PeachCastle_Odyssey.jpg" },
+            { id: 'loc2', name: "彩虹之路", type: 'fun', details: "一定要來挑戰的賽道，小心別掉下去！", img_url: "https://mario.wiki.gallery/images/thumb/3/3e/MK8_Rainbow_Road_Course_Icon.png/500px-MK8_Rainbow_Road_Course_Icon.png" },
+            { id: 'loc3', name: "奇諾比奧咖啡", type: 'food', details: "這裡的蘑菇濃湯是必點招牌。", img_url: "https://mario.wiki.gallery/images/thumb/a/a2/Kinopio_Cafe_Osaka.jpeg/800px-Kinopio_Cafe_Osaka.jpeg" },
+            { id: 'loc4', name: "庫巴城堡", type: 'visual', details: "氣氛比較陰森，但建築很壯觀。", img_url: "https://mario.wiki.gallery/images/thumb/4/4ee/Bowser_Castle_PMTOK.jpg/800px-Bowser_Castle_PMTOK.jpg" },
+            { id: 'loc5', name: "星星商店", type: 'shop', details: "販賣無敵星星和各種道具。", img_url: "https://mario.wiki.gallery/images/thumb/6/65/Star_Rush_shop.png/500px-Star_Rush_shop.png" },
+        ];
+
+        const MARIO_DAYS = [
+            { day_number: 1, date_display: "2026-02-04", title: "抵達王國" },
+            { day_number: 2, date_display: "2026-02-05", title: "賽車與美食" },
+            { day_number: 3, date_display: "2026-02-06", title: "大魔王觀光" },
+        ];
+
+        const MARIO_ITEMS = [
+            { day_number: 1, location_id: 'loc1', sort_order: 1, note: "Check-in" },
+            { day_number: 2, location_id: 'loc2', sort_order: 1, note: "早起練車" },
+            { day_number: 2, location_id: 'loc3', sort_order: 2, note: "午餐" },
+            { day_number: 3, location_id: 'loc4', sort_order: 1, note: "拍照" },
+            { day_number: 3, location_id: 'loc5', sort_order: 2, note: "伴手禮" },
+        ];
+
         // Safe default
         const defaultDb = {
             expenses: MARIO_EXPENSES.map(e => ({ ...e, id: Math.random().toString(36).substr(2, 9), created_at: new Date().toISOString() })),
             app_settings: [
                 { key: 'members_config', value: { members: MARIO_MEMBERS, families: MARIO_FAMILIES } }
             ],
-            // Add minimal itinerary for demo to avoid "No Data" state if possible, or user can import.
-            // But let's leave itinerary empty or simple to encourage exploration.
-            itinerary_days: [],
-            itinerary_items: [],
-            locations: []
+            itinerary_days: MARIO_DAYS,
+            locations: MARIO_LOCATIONS,
+            itinerary_items: MARIO_ITEMS.map(i => ({ ...i, id: Math.random().toString(36).substr(2, 9) }))
         };
 
         if (typeof window === 'undefined') return defaultDb;
