@@ -191,13 +191,30 @@ class MockSupabaseClient {
     }
 
     channel(name) {
-        return {
-            on: () => ({ subscribe: () => { } }),
-            subscribe: () => { }
+        const mockChannel = {
+            on: (event, config, callback) => {
+                // Return self for chaining
+                return mockChannel;
+            },
+            subscribe: () => {
+                // Return self or acceptable object
+                return mockChannel;
+            },
+            unsubscribe: () => { }
         };
+        return mockChannel;
     }
 
     removeChannel() { }
+
+    get storage() {
+        return {
+            from: (bucket) => ({
+                upload: async () => ({ error: null, data: { path: 'mock_path' } }),
+                getPublicUrl: (path) => ({ data: { publicUrl: 'https://via.placeholder.com/300?text=Mock+Image' } })
+            })
+        };
+    }
 }
 
 export const mockSupabase = new MockSupabaseClient();
