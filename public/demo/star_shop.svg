@@ -1,0 +1,12 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="600" fill="#FFFDE7" />
+  
+  <!-- Star Shape -->
+  <polygon points="400,100 460,280 650,280 500,380 560,560 400,460 240,560 300,380 150,280 340,280" fill="#FFEB3B" stroke="#FBC02D" stroke-width="10" />
+  
+  <!-- Eyes -->
+  <ellipse cx="370" cy="320" rx="10" ry="30" fill="black" />
+  <ellipse cx="430" cy="320" rx="10" ry="30" fill="black" />
+  
+  <text x="400" y="580" font-family="Arial" font-size="24" fill="#FBC02D" text-anchor="middle">Star Shop</text>
+</svg>

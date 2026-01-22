@@ -1,0 +1,32 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="space" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a237e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4a148c;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="rainbow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#ff0000;stop-opacity:1" />
+      <stop offset="20%" style="stop-color:#ffff00;stop-opacity:1" />
+      <stop offset="40%" style="stop-color:#00ff00;stop-opacity:1" />
+      <stop offset="60%" style="stop-color:#00ffff;stop-opacity:1" />
+      <stop offset="80%" style="stop-color:#0000ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff00ff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#space)" />
+  
+  <!-- Stars -->
+  <circle cx="100" cy="100" r="2" fill="white" />
+  <circle cx="200" cy="50" r="3" fill="white" />
+  <circle cx="500" cy="300" r="1" fill="white" />
+  <circle cx="700" cy="150" r="2" fill="white" />
+  <circle cx="600" cy="500" r="2" fill="white" />
+
+  <!-- Track -->
+  <path d="M0,400 Q400,200 800,400 Q400,600 0,400" fill="none" stroke="url(#rainbow)" stroke-width="60" opacity="0.8" />
+  
+  <!-- Dashes -->
+  <path d="M0,400 Q400,200 800,400" fill="none" stroke="white" stroke-width="4" stroke-dasharray="20,20" opacity="0.6" />
+
+  <text x="400" y="550" font-family="Arial" font-size="24" fill="white" text-anchor="middle">Rainbow Road</text>
+</svg>

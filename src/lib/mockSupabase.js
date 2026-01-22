@@ -1,7 +1,7 @@
 
 import { INITIAL_EXPENSES } from './data';
 
-const STORAGE_KEY = 'demo_db_mario_v3'; // Bump version
+const STORAGE_KEY = 'demo_db_mario_v4'; // Bump version
 
 class MockQueryBuilder {
     constructor(data, onUpdate, fullDb) {
@@ -175,11 +175,11 @@ class MockSupabaseClient {
         ];
 
         const MARIO_LOCATIONS = [
-            { id: 'loc1', name: "碧姬公主城堡", type: 'visual', details: "蘑菇王國的中心，非常華麗。", img_url: "https://mario.wiki.gallery/images/thumb/7/75/PeachCastle_Odyssey.jpg/1200px-PeachCastle_Odyssey.jpg" },
-            { id: 'loc2', name: "彩虹之路", type: 'fun', details: "一定要來挑戰的賽道，小心別掉下去！", img_url: "https://mario.wiki.gallery/images/thumb/3/3e/MK8_Rainbow_Road_Course_Icon.png/500px-MK8_Rainbow_Road_Course_Icon.png" },
-            { id: 'loc3', name: "奇諾比奧咖啡", type: 'food', details: "這裡的蘑菇濃湯是必點招牌。", img_url: "https://mario.wiki.gallery/images/thumb/a/a2/Kinopio_Cafe_Osaka.jpeg/800px-Kinopio_Cafe_Osaka.jpeg" },
-            { id: 'loc4', name: "庫巴城堡", type: 'visual', details: "氣氛比較陰森，但建築很壯觀。", img_url: "https://mario.wiki.gallery/images/thumb/4/4ee/Bowser_Castle_PMTOK.jpg/800px-Bowser_Castle_PMTOK.jpg" },
-            { id: 'loc5', name: "星星商店", type: 'shop', details: "販賣無敵星星和各種道具。", img_url: "https://mario.wiki.gallery/images/thumb/6/65/Star_Rush_shop.png/500px-Star_Rush_shop.png" },
+            { id: 'loc1', name: "碧姬公主城堡", type: 'visual', details: "蘑菇王國的中心，非常華麗。", img_url: "/demo/peach_castle.svg" },
+            { id: 'loc2', name: "彩虹之路", type: 'fun', details: "一定要來挑戰的賽道，小心別掉下去！", img_url: "/demo/rainbow_road.svg" },
+            { id: 'loc3', name: "奇諾比奧咖啡", type: 'food', details: "這裡的蘑菇濃湯是必點招牌。", img_url: "/demo/toad_cafe.svg" },
+            { id: 'loc4', name: "庫巴城堡", type: 'visual', details: "氣氛比較陰森，但建築很壯觀。", img_url: "/demo/bowser_castle.svg" },
+            { id: 'loc5', name: "星星商店", type: 'shop', details: "販賣無敵星星和各種道具。", img_url: "/demo/star_shop.svg" },
         ];
 
         const MARIO_DAYS = [

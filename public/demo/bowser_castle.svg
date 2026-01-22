@@ -1,0 +1,24 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="lava" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF5722;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#B71C1C;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="#212121" />
+  
+  <!-- Lava -->
+  <rect x="0" y="500" width="800" height="100" fill="url(#lava)" />
+  
+  <!-- Castle -->
+  <rect x="250" y="200" width="300" height="300" fill="#424242" />
+  <polygon points="250,200 280,150 310,200" fill="#424242" />
+  <polygon points="385,200 415,150 445,200" fill="#424242" />
+  <polygon points="520,200 550,150 580,200" fill="#424242" />
+  
+  <!-- Face -->
+  <path d="M350,300 L400,350 L450,300" stroke="#FFC107" stroke-width="5" fill="none" /> <!-- Eyes/Brows -->
+  <rect x="360" y="400" width="80" height="100" rx="40" fill="#B71C1C" /> <!-- Mouth -->
+
+  <text x="400" y="580" font-family="Arial" font-size="24" fill="white" text-anchor="middle">Bowser's Castle</text>
+</svg>
