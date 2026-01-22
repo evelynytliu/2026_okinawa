@@ -38,12 +38,18 @@
 .input,
 .select,
 .textarea {
+    display: block;
     width: 100%;
-    padding: 1rem;
+    max-width: 100%;
+    box-sizing: border-box;
+    /* Ensure padding doesn't overflow */
+    padding: 0.8rem 1rem;
+    /* Slightly reduce vertical padding */
     border: 1px solid #ddd;
     border-radius: var(--radius-md);
     font-family: var(--font-sans);
     font-size: 1rem;
+    /* Prevent iOS zoom */
     background: #FAFAFA;
     resize: vertical;
 }

@@ -40,7 +40,10 @@ function ExpensesPageContent() {
     }, []);
 
     const fetchExpenses = async () => {
-        if (!supabase) return;
+        if (!supabase) {
+            setLoading(false);
+            return;
+        }
         try {
             const { data, error } = await supabase
                 .from('expenses')
@@ -135,6 +138,11 @@ function ExpensesPageContent() {
 
             {loading ? (
                 <p className="text-center text-muted">載入中...</p>
+            ) : !supabase ? (
+                <div style={{ textAlign: 'center', padding: '2rem', background: '#ffebee', borderRadius: '8px', border: '1px solid #ffcdd2', color: '#c62828' }}>
+                    <p style={{ fontWeight: 'bold' }}>⚠️ 資料庫連結失敗</p>
+                    <p style={{ fontSize: '0.9rem', marginTop: '4px' }}>Missing Environment Variables</p>
+                </div>
             ) : expenses.length === 0 ? (
                 <div className={styles.emptyState}>
                     <p>尚未有消費紀錄</p>

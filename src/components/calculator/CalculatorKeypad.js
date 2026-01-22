@@ -80,7 +80,7 @@ export default function CalculatorKeypad({ initialValue, onValueChange, onConfir
                     <button className={styles.btnClose} onClick={onClose}><X size={24} /></button>
                 </div>
 
-                <div className={styles.display}>{formatDisplay(display)}</div>
+
 
                 <div className={styles.grid}>
                     <button className={`${styles.btn} ${styles.btnAction}`} onClick={() => handlePress('C')}>C</button>

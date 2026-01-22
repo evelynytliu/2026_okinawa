@@ -263,7 +263,10 @@ function ItineraryContent() {
     }, [schedule, searchParams]);
 
     const fetchSchedule = async () => {
-        if (!supabase) return;
+        if (!supabase) {
+            setLoading(false);
+            return;
+        }
         try {
             const { data: daysData, error: daysError } = await supabase
                 .from('itinerary_days')
@@ -544,7 +547,19 @@ function ItineraryContent() {
                 onDragEnd={handleDragEnd}
             >
                 <div className={styles.timeline}>
-                    {schedule.length === 0 && <p style={{ textAlign: 'center' }}>暫無資料，請至「設定」匯入預設行程。</p>}
+                    {!supabase && (
+                        <div style={{ textAlign: 'center', padding: '2rem', background: '#ffebee', borderRadius: '8px', border: '1px solid #ffcdd2', color: '#c62828' }}>
+                            <p style={{ fontWeight: 'bold' }}>⚠️ 資料庫連結失敗</p>
+                            <p style={{ fontSize: '0.9rem', marginTop: '4px' }}>
+                                請檢查 Vercel 環境變數設定。
+                                <br />
+                                若要使用範例模式，請設定 <code>NEXT_PUBLIC_DEMO_MODE=true</code>。
+                                <br />
+                                若要連結真實資料，請設定 <code>NEXT_PUBLIC_SUPABASE_URL</code> 與 Key。
+                            </p>
+                        </div>
+                    )}
+                    {supabase && schedule.length === 0 && <p style={{ textAlign: 'center' }}>暫無資料，請至「設定」匯入預設行程。</p>}
 
                     {schedule.map((dayItem, index) => (
                         <div key={dayItem.id} className={`${styles.dayBlock} fade-in`} style={{ animationDelay: `${index * 0.1}s` }}>
