@@ -19,12 +19,37 @@ export default function Dashboard() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     setDaysLeft(diffDays > 0 ? diffDays : 0);
 
-    // 2. Randomly select a featured spot
-    const spots = Object.entries(LOCATION_DETAILS).filter(([key, s]) => s.img_url);
-    if (spots.length > 0) {
-      const [id, data] = spots[Math.floor(Math.random() * spots.length)];
-      setFeaturedSpot({ ...data, id });
-    }
+    // 2. Randomly select a featured spot (DB -> Static Fallback)
+    const fetchFeatured = async () => {
+      let found = false;
+
+      // Try DB first (Supports Demo Mode & Real DB updates)
+      if (supabase) {
+        try {
+          const { data } = await supabase.from('locations').select('*');
+          if (data && data.length > 0) {
+            const valid = data.filter(s => s.img_url);
+            if (valid.length > 0) {
+              const random = valid[Math.floor(Math.random() * valid.length)];
+              setFeaturedSpot(random);
+              found = true;
+            }
+          }
+        } catch (e) {
+          console.error("Featured fetch failed", e);
+        }
+      }
+
+      // Fallback to static data if no DB result
+      if (!found) {
+        const spots = Object.entries(LOCATION_DETAILS).filter(([key, s]) => s.img_url);
+        if (spots.length > 0) {
+          const [id, data] = spots[Math.floor(Math.random() * spots.length)];
+          setFeaturedSpot({ ...data, id });
+        }
+      }
+    };
+    fetchFeatured();
   }, []);
 
   return (
