@@ -55,9 +55,17 @@ export default function Dashboard() {
   return (
     <div className={styles.dashboard}>
       <header className={styles.header}>
-        <h1 className={`${styles.titleMain} fade-in`}>Okinawa</h1>
-        <span className={`${styles.titleYear} fade-in`}>2026</span>
-        <p className={`${styles.subtitle} fade-in`}>Family Trip &bull; {TRIP_DETAILS.dates.start.replace(/-/g, '.')}</p>
+        <h1 className={`${styles.titleMain} fade-in`}>
+          {String(process.env.NEXT_PUBLIC_DEMO_MODE).toLowerCase() === 'true' ? "Mushroom" : "Okinawa"}
+        </h1>
+        <span className={`${styles.titleYear} fade-in`}>
+          {String(process.env.NEXT_PUBLIC_DEMO_MODE).toLowerCase() === 'true' ? "Kingdom" : "2026"}
+        </span>
+        <p className={`${styles.subtitle} fade-in`}>
+          {String(process.env.NEXT_PUBLIC_DEMO_MODE).toLowerCase() === 'true'
+            ? "Super Mario Trip • 2026.02.04"
+            : `Family Trip • ${TRIP_DETAILS.dates.start.replace(/-/g, '.')}`}
+        </p>
       </header>
 
       <Link href="/flights" className={`${styles.heroCard} fade-in`}>
