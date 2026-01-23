@@ -1,13 +1,25 @@
 .header {
-    margin-bottom: 2rem;
+    margin-bottom: 3rem;
     text-align: center;
-    margin-top: 1rem;
+    margin-top: 2rem;
+    position: relative;
+}
+
+.header h2 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--primary), #4DD0E1);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 0.1em;
 }
 
 .timeline {
     position: relative;
-    padding-left: 1rem;
-    padding-bottom: 4rem;
+    padding-left: 1.5rem;
+    padding-bottom: 5rem;
+    margin-top: 2rem;
 }
 
 .timeline::before {
@@ -16,80 +28,122 @@
     left: 2.5rem;
     top: 0;
     bottom: 0;
-    width: 1px;
-    background: rgba(0, 0, 0, 0.1);
+    width: 2px;
+    background: linear-gradient(to bottom, var(--primary) 0%, rgba(0, 0, 0, 0.05) 100%);
+    opacity: 0.3;
     z-index: 0;
 }
 
 .dayBlock {
     display: flex;
-    margin-bottom: 2rem;
+    margin-bottom: 3.5rem;
     position: relative;
     z-index: 1;
+    gap: 1.5rem;
 }
 
 .dateColumn {
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 3.5rem;
-    margin-right: 1rem;
+    width: 4.5rem;
     flex-shrink: 0;
     padding-top: 0.5rem;
+    position: relative;
+}
+
+.dateCircle {
+    width: 3.5rem;
+    height: 3.5rem;
+    background: var(--bg-card);
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    border: 2px solid var(--color-sea-light);
+    margin-bottom: 0.8rem;
+    z-index: 2;
 }
 
 .dateLabel {
-    font-weight: 700;
+    font-weight: 800;
     color: var(--primary);
-    font-family: var(--font-serif);
-    line-height: 1.2;
+    font-family: var(--font-sans);
+    font-size: 1.1rem;
+    line-height: 1;
 }
 
 .weekdayLabel {
-    font-size: 0.75rem;
-    color: #888;
-    margin-top: 0.2rem;
-    font-weight: 500;
+    font-size: 0.7rem;
+    color: #999;
+    margin-top: 0.1rem;
+    font-weight: 700;
 }
 
-.dayLabel {
-    font-size: 0.65rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    margin-top: 0.1rem;
-    opacity: 0.8;
+.dayNumberLabel {
+    font-size: 0.8rem;
+    color: var(--primary);
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 700;
+}
+
+.weatherWrapper {
+    margin-top: 1rem;
 }
 
 .contentColumn {
     flex: 1;
     background: var(--bg-card);
-    padding: 1rem;
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-    border: 1px solid rgba(0, 0, 0, 0.02);
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    position: relative;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.contentColumn:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
 }
 
 .cardHeader {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 0.75rem;
-    border-bottom: 1px solid var(--color-sand);
-    padding-bottom: 0.5rem;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 .cardHeader h3 {
-    font-size: 1.1rem;
+    font-size: 1.25rem;
     color: var(--text-main);
     margin: 0;
+    font-weight: 700;
+    letter-spacing: 0.02em;
 }
 
 .editBtn {
-    background: none;
+    background: var(--color-sea-light);
     border: none;
     color: var(--primary);
     cursor: pointer;
-    opacity: 0.7;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.editBtn:hover {
+    background: var(--primary);
+    color: white;
 }
 
 .locationList {
@@ -98,165 +152,150 @@
 }
 
 .locationItem {
-    margin-bottom: 1rem;
-    border-bottom: 1px dashed #eee;
-    padding-bottom: 0.5rem;
+    margin-bottom: 0.8rem;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    padding: 0.8rem;
     cursor: pointer;
-    transition: background 0.2s;
-    border-radius: 4px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    background: rgba(0, 0, 0, 0.01);
 }
 
 .locationItem:hover {
-    background: rgba(0, 0, 0, 0.02);
+    background: var(--color-sea-light);
+    border-color: rgba(46, 139, 153, 0.2);
+    transform: translateX(5px);
 }
 
 .locationItem:last-child {
-    border-bottom: none;
     margin-bottom: 0;
 }
 
 .locMain {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.3rem;
 }
 
 .locTitleRow {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.8rem;
 }
 
 .locName {
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-main);
+    font-size: 1rem;
 }
 
 .infoIcon {
-    color: var(--secondary);
-    opacity: 0.6;
+    color: var(--primary);
+    opacity: 0.4;
+    margin-left: auto;
 }
 
 .locNote {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: var(--text-muted);
-    margin-left: 1.5rem;
-    opacity: 0.8;
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    margin-left: 2rem;
+    opacity: 0.7;
 }
 
 .icon {
     color: var(--color-coral);
     flex-shrink: 0;
-}
-
-.reorderControls {
-    display: flex;
-    flex-direction: column;
-    margin-right: 0.8rem;
-    gap: 2px;
-}
-
-.reorderBtn {
-    background: #f0f0f0;
-    border: none;
-    cursor: pointer;
-    padding: 2px;
-    border-radius: 4px;
-    color: #666;
-    display: flex;
-}
-
-.reorderBtn:hover {
-    background: #e0e0e0;
-}
-
-.reorderBtn:disabled {
-    opacity: 0.3;
-    cursor: default;
-}
-
-.editActions {
-    margin-left: auto;
-    display: flex;
-    gap: 0.5rem;
-}
-
-.editItemBtn,
-.deleteItemBtn {
-    background: var(--color-sand);
-    border: none;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-muted);
-    cursor: pointer;
-}
-
-.deleteItemBtn {
-    background: #fee2e2;
-    color: #ef4444;
+    background: white;
+    padding: 4px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 .addBtn {
     width: 100%;
-    padding: 0.8rem;
-    background: white;
-    border: 1px dashed var(--primary);
+    padding: 1rem;
+    background: rgba(46, 139, 153, 0.05);
+    border: 2px dashed rgba(46, 139, 153, 0.2);
     color: var(--primary);
-    border-radius: 8px;
-    margin-top: 1rem;
+    border-radius: 12px;
+    margin-top: 1.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
     cursor: pointer;
-    font-weight: 500;
+    font-weight: 600;
+    transition: all 0.2s;
 }
 
 .addBtn:hover {
-    background: var(--color-bg);
+    background: var(--color-sea-light);
+    border-color: var(--primary);
+    transform: scale(1.01);
 }
 
-
-
-/* Modal Styles */
+/* Modal Enhancements */
 .modalOverlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.4);
     z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    padding-bottom: 90px;
-    /* Avoid navbar */
-    backdrop-filter: blur(4px);
-    animation: fadeIn 0.2s ease-out;
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.3s ease-out;
 }
 
 .modalContent {
-    background: var(--bg-card);
+    background: rgba(255, 255, 255, 0.9);
     width: 100%;
-    max-width: 400px;
+    max-width: 450px;
     max-height: 85vh;
-    border-radius: var(--radius-lg);
+    border-radius: 28px;
     position: relative;
     overflow-y: auto;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
-    animation: slideUp 0.3s ease-out;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.modalBody {
+    padding: 2rem;
+}
+
+/* Mobile Tweaks */
+@media (max-width: 480px) {
+    .header h2 {
+        font-size: 1.8rem;
+    }
+
+    .timeline {
+        padding-left: 0.5rem;
+    }
+
+    .timeline::before {
+        left: 2rem;
+    }
+
+    .dateColumn {
+        width: 4rem;
+    }
+
+    .dateCircle {
+        width: 3rem;
+        height: 3rem;
+    }
+
+    .contentColumn {
+        padding: 1.2rem;
+    }
 }
 
 .topActions {

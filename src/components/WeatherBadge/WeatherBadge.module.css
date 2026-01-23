@@ -1,0 +1,60 @@
+.badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.iconWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.temp {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--primary);
+    font-family: var(--font-sans);
+}
+
+.desc {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.sun {
+    color: #f59e0b;
+}
+
+.cloudSun {
+    color: #64748b;
+}
+
+.fog {
+    color: #94a3b8;
+}
+
+.rain {
+    color: #3b82f6;
+}
+
+.snow {
+    color: #bae6fd;
+}
+
+.lightning {
+    color: #7c3aed;
+}
