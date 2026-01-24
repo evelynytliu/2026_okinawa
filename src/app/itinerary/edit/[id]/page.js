@@ -218,6 +218,12 @@ export default function EditLocationPage() {
         setIsAiLoading(true);
         try {
             const result = await fetchPlaceDetails(name, key);
+
+            if (result && result.error) {
+                alert(`❌ AI 錯誤: ${result.error}`);
+                return;
+            }
+
             if (result && result.found) {
                 if (result.address) setAddress(result.address);
                 if (result.details) setDetails(result.details);
@@ -225,11 +231,11 @@ export default function EditLocationPage() {
                 if (result.type) setType(result.type);
                 alert('✨ AI 資料已自動填入！');
             } else {
-                alert('⚠️ 找不到相關資訊，請嘗試輸入更完整的名稱 (例如包含地區)');
+                alert('⚠️ 雖然成功連線，但 AI 回報找不到相關資訊，請嘗試更換名稱。');
             }
         } catch (e) {
             console.error(e);
-            alert('❌ AI 連線失敗，請檢查 Key 或網路');
+            alert(`❌ 發生未知錯誤: ${e.message}`);
         } finally {
             setIsAiLoading(false);
         }

@@ -21,8 +21,7 @@ export async function fetchPlaceDetails(placeName, apiKey) {
     // Trim key to avoid whitespace issues
     const cleanKey = apiKey.trim();
     if (!cleanKey.startsWith('AIza')) {
-        console.error("Invalid API Key format (should start with AIza)");
-        return null;
+        return { error: "Invalid API Key format (must start with AIza)" };
     }
 
     try {
@@ -41,30 +40,33 @@ export async function fetchPlaceDetails(placeName, apiKey) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error("Gemini API Error:", response.status, errorText);
+            let errMsg = `API Error ${response.status}`;
 
-            if (response.status === 404) {
-                throw new Error("模型未找到 (404)。可能是新建立的金鑰尚未生效 (請等待幾分鐘)，或該金鑰專案未啟用 Generative Language API。");
-            }
-            throw new Error(`API Error: ${response.status} - ${errorText}`);
+            try {
+                const errJson = JSON.parse(errorText);
+                if (errJson.error && errJson.error.message) {
+                    errMsg = errJson.error.message;
+                }
+            } catch (e) { }
+
+            return { error: errMsg };
         }
 
         const data = await response.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
-        if (!text) return null;
+        if (!text) return { error: "No text in response" };
 
         // Robust JSON Extraction
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
-            console.warn("No JSON found in response:", text);
-            return null;
+            return { error: "Response invalid (No JSON found): " + text.substring(0, 50) + "..." };
         }
 
         return JSON.parse(jsonMatch[0]);
 
     } catch (error) {
         console.error("Gemini Fetch Error:", error);
-        return null;
+        return { error: error.message };
     }
 }
