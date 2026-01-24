@@ -1,8 +1,20 @@
 "use client";
 import { useState } from 'react';
-import { MapPin, Loader2, Navigation, CreditCard, Banknote, Store, ArrowLeft, Sparkles, ExternalLink, Star, Car, Footprints } from 'lucide-react';
+import { MapPin, Loader2, Navigation, CreditCard, Banknote, Store, ArrowLeft, Sparkles, ExternalLink, Star, Car, Footprints, Search, MapPinned } from 'lucide-react';
 import Link from 'next/link';
 import styles from './page.module.css';
+
+// 預設沖繩熱門地點
+const PRESET_LOCATIONS = [
+    { name: '那霸國際通', lat: 26.2154, lng: 127.6847 },
+    { name: '美國村', lat: 26.3231, lng: 127.7585 },
+    { name: '萬座毛', lat: 26.5044, lng: 127.8518 },
+    { name: '名護市區', lat: 26.5918, lng: 127.9773 },
+    { name: '恩納村', lat: 26.4975, lng: 127.8530 },
+    { name: '瀨長島', lat: 26.1778, lng: 127.6514 },
+    { name: '首里城公園', lat: 26.2170, lng: 127.7195 },
+    { name: '古宇利島', lat: 26.6941, lng: 128.0265 },
+];
 
 export default function NearbyPage() {
     const [loading, setLoading] = useState(false);
@@ -11,6 +23,9 @@ export default function NearbyPage() {
     const [recommendations, setRecommendations] = useState([]);
     const [error, setError] = useState(null);
     const [transportMode, setTransportMode] = useState('walking'); // 'walking' or 'driving'
+    const [locationMode, setLocationMode] = useState('gps'); // 'gps' or 'custom'
+    const [customInput, setCustomInput] = useState('');
+    const [showPresets, setShowPresets] = useState(false);
 
     const getLocation = () => {
         if (!navigator.geolocation) {
@@ -25,7 +40,8 @@ export default function NearbyPage() {
             (position) => {
                 setLocation({
                     lat: position.coords.latitude,
-                    lng: position.coords.longitude
+                    lng: position.coords.longitude,
+                    name: '目前位置'
                 });
                 setLocating(false);
             },
@@ -37,9 +53,81 @@ export default function NearbyPage() {
         );
     };
 
+    const selectPresetLocation = (preset) => {
+        setLocation({
+            lat: preset.lat,
+            lng: preset.lng,
+            name: preset.name
+        });
+        setShowPresets(false);
+        setCustomInput(preset.name);
+    };
+
+    const handleCustomSearch = async () => {
+        if (!customInput.trim()) {
+            setError("請輸入地點名稱或座標");
+            return;
+        }
+
+        // Check if input is coordinates (e.g., "26.2154, 127.6847")
+        const coordMatch = customInput.match(/^([\d.]+)\s*[,，]\s*([\d.]+)$/);
+        if (coordMatch) {
+            const lat = parseFloat(coordMatch[1]);
+            const lng = parseFloat(coordMatch[2]);
+            if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                setLocation({ lat, lng, name: `座標 (${lat.toFixed(4)}, ${lng.toFixed(4)})` });
+                setError(null);
+                return;
+            }
+        }
+
+        // Use Gemini to get coordinates for the location name
+        const apiKey = localStorage.getItem('gemini_api_key');
+        if (!apiKey) {
+            setError("請先到設定頁面輸入 Gemini API Key");
+            return;
+        }
+
+        setLocating(true);
+        setError(null);
+
+        try {
+            const prompt = `請提供「${customInput}」這個地點的經緯度座標。如果是沖繩的地點，請提供精確座標。回覆格式必須是純 JSON（不要 Markdown）：{"lat": 26.xxxx, "lng": 127.xxxx, "name": "地點名稱"}`;
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }]
+                })
+            });
+
+            if (!response.ok) throw new Error("AI 查詢失敗");
+
+            const data = await response.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+
+            if (jsonMatch) {
+                const parsed = JSON.parse(jsonMatch[0]);
+                setLocation({
+                    lat: parsed.lat,
+                    lng: parsed.lng,
+                    name: parsed.name || customInput
+                });
+            } else {
+                throw new Error("無法解析地點座標");
+            }
+        } catch (err) {
+            setError("查詢地點失敗：" + err.message);
+        } finally {
+            setLocating(false);
+        }
+    };
+
     const fetchRecommendations = async () => {
         if (!location) {
-            setError("請先取得您的位置");
+            setError("請先取得或選擇位置");
             return;
         }
 
@@ -127,24 +215,95 @@ export default function NearbyPage() {
                 <h1 className={styles.title}>附近推薦</h1>
             </header>
 
-            {/* Location Section */}
-            <div className={styles.locationCard}>
-                <div className={styles.locationInfo}>
-                    <MapPin size={24} color="var(--color-coral)" />
-                    {location ? (
-                        <div>
-                            <p className={styles.locationLabel}>目前位置</p>
-                            <p className={styles.locationCoords}>{location.lat.toFixed(4)}, {location.lng.toFixed(4)}</p>
-                        </div>
-                    ) : (
-                        <p className={styles.locationLabel}>尚未取得位置</p>
-                    )}
-                </div>
-                <button onClick={getLocation} disabled={locating} className={styles.locateBtn}>
-                    {locating ? <Loader2 className="animate-spin" size={18} /> : <Navigation size={18} />}
-                    {locating ? '定位中...' : '取得位置'}
+            {/* Location Mode Toggle */}
+            <div className={styles.modeToggle}>
+                <button
+                    className={`${styles.modeBtn} ${locationMode === 'gps' ? styles.modeActive : ''}`}
+                    onClick={() => setLocationMode('gps')}
+                >
+                    <Navigation size={16} />
+                    目前位置
+                </button>
+                <button
+                    className={`${styles.modeBtn} ${locationMode === 'custom' ? styles.modeActive : ''}`}
+                    onClick={() => setLocationMode('custom')}
+                >
+                    <MapPinned size={16} />
+                    自訂地點
                 </button>
             </div>
+
+            {/* GPS Location Section */}
+            {locationMode === 'gps' && (
+                <div className={styles.locationCard}>
+                    <div className={styles.locationInfo}>
+                        <MapPin size={24} color="var(--color-coral)" />
+                        {location && location.name === '目前位置' ? (
+                            <div>
+                                <p className={styles.locationLabel}>目前位置</p>
+                                <p className={styles.locationCoords}>{location.lat.toFixed(4)}, {location.lng.toFixed(4)}</p>
+                            </div>
+                        ) : (
+                            <p className={styles.locationLabel}>尚未取得 GPS 位置</p>
+                        )}
+                    </div>
+                    <button onClick={getLocation} disabled={locating} className={styles.locateBtn}>
+                        {locating ? <Loader2 className="animate-spin" size={18} /> : <Navigation size={18} />}
+                        {locating ? '定位中...' : '取得位置'}
+                    </button>
+                </div>
+            )}
+
+            {/* Custom Location Section */}
+            {locationMode === 'custom' && (
+                <div className={styles.customLocationCard}>
+                    <div className={styles.customInputRow}>
+                        <input
+                            type="text"
+                            className={styles.customInput}
+                            placeholder="輸入地點名稱或座標 (如: 美國村 或 26.32, 127.75)"
+                            value={customInput}
+                            onChange={(e) => setCustomInput(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleCustomSearch()}
+                        />
+                        <button onClick={handleCustomSearch} disabled={locating} className={styles.searchLocationBtn}>
+                            {locating ? <Loader2 className="animate-spin" size={18} /> : <Search size={18} />}
+                        </button>
+                    </div>
+
+                    {/* Preset Locations */}
+                    <div className={styles.presetSection}>
+                        <button
+                            className={styles.presetToggle}
+                            onClick={() => setShowPresets(!showPresets)}
+                        >
+                            📍 快速選擇沖繩熱門地點 {showPresets ? '▲' : '▼'}
+                        </button>
+                        {showPresets && (
+                            <div className={styles.presetGrid}>
+                                {PRESET_LOCATIONS.map((preset, idx) => (
+                                    <button
+                                        key={idx}
+                                        className={styles.presetBtn}
+                                        onClick={() => selectPresetLocation(preset)}
+                                    >
+                                        {preset.name}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Show selected location */}
+                    {location && location.name !== '目前位置' && (
+                        <div className={styles.selectedLocation}>
+                            <MapPin size={16} color="var(--color-sea-blue)" />
+                            <span>{location.name}</span>
+                            <span className={styles.locationCoords}>({location.lat.toFixed(4)}, {location.lng.toFixed(4)})</span>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Transport Mode Selector */}
             <div className={styles.transportToggle}>
