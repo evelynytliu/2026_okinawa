@@ -366,7 +366,7 @@ export default function Dashboard() {
       {/* FAB */}
       <Link href="/expenses/add" className={styles.fab} style={{
         bottom: '130px',
-        zIndex: 2147483647,
+        zIndex: selectedRest ? 900 : 2147483647,
         width: '68px',
         height: '68px',
         borderRadius: '50%',
