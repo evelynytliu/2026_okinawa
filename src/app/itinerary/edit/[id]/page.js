@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Save, Upload, MapPin, Loader2, X, Link as LinkIcon, FileText, Trash2 } from 'lucide-react';
+import { fetchPlaceDetails } from '@/lib/gemini';
+import { ArrowLeft, Save, Upload, MapPin, Loader2, X, Link as LinkIcon, FileText, Trash2, Sparkles } from 'lucide-react';
 import {
     DndContext,
     closestCenter,
@@ -205,6 +206,34 @@ export default function EditLocationPage() {
     const [details, setDetails] = useState('');
     const [note, setNote] = useState('');
     const [attachments, setAttachments] = useState([]);
+
+    // AI Auto-Fill State
+    const [isAiLoading, setIsAiLoading] = useState(false);
+
+    const handleAutoFill = async () => {
+        if (!name) return alert('請先輸入景點名稱');
+        const key = localStorage.getItem('gemini_api_key');
+        if (!key) return alert('請先至設定頁面輸入 Gemini API Key');
+
+        setIsAiLoading(true);
+        try {
+            const result = await fetchPlaceDetails(name, key);
+            if (result && result.found) {
+                if (result.address) setAddress(result.address);
+                if (result.details) setDetails(result.details);
+                if (result.note) setNote(result.note);
+                if (result.type) setType(result.type);
+                alert('✨ AI 資料已自動填入！');
+            } else {
+                alert('⚠️ 找不到相關資訊，請嘗試輸入更完整的名稱 (例如包含地區)');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('❌ AI 連線失敗，請檢查 Key 或網路');
+        } finally {
+            setIsAiLoading(false);
+        }
+    };
 
     // NEW FIELDS
     const [type, setType] = useState('spot'); // spot, food, stay, fun, shop, transport
@@ -683,7 +712,33 @@ export default function EditLocationPage() {
 
                 {/* Name */}
                 <div className="form-group">
-                    <label style={labelStyle}>名稱</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <label style={{ ...labelStyle, marginBottom: 0 }}>名稱</label>
+                        <button
+                            type="button"
+                            onClick={handleAutoFill}
+                            disabled={isAiLoading || !name}
+                            style={{
+                                fontSize: '0.8rem',
+                                padding: '4px 10px',
+                                background: isAiLoading ? '#ccc' : '#00b894',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '16px',
+                                cursor: isAiLoading ? 'wait' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontWeight: '500',
+                                transition: 'all 0.2s',
+                                opacity: !name ? 0.5 : 1,
+                                boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+                            }}
+                        >
+                            {isAiLoading ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
+                            {isAiLoading ? '分析中...' : 'AI 自動填寫'}
+                        </button>
+                    </div>
                     <input
                         style={inputStyle}
                         value={name}
