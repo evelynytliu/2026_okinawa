@@ -50,8 +50,24 @@ export async function fetchPlaceDetails(placeName, apiKey) {
             } catch (e) { }
 
             if (response.status === 404) {
-                // Specific guidance for "Model not found" -> Project issue
-                return { error: "找不到模型 (404)。您的 API Key 所在專案可能未啟用權限。\n\n💡 解決方法：\n請回到 Google AI Studio，點擊 'Create API key'，並選擇 'Create API key in new project' (建立新專案)，使用新專案的 Key 即可解決。" };
+                // Diagnostic: Try to list available models
+                let availableModels = "Unknown";
+                try {
+                    const listResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`);
+                    if (listResp.ok) {
+                        const listData = await listResp.json();
+                        // Filter for generateContent supported models
+                        const models = listData.models
+                            .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
+                            .map(m => m.name.replace('models/', ''))
+                            .slice(0, 5); // Take top 5
+                        availableModels = models.join(', ');
+                    }
+                } catch (e) {
+                    console.error("ListModels failed", e);
+                }
+
+                return { error: `找不到模型 (404)。\n您的 Key 可用模型: [${availableModels}]\n\n請截圖此畫面回報，我們會根據您的可用模型調整設定。` };
             }
 
             return { error: errMsg };
