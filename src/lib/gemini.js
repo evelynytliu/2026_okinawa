@@ -7,7 +7,7 @@ export async function fetchPlaceDetails(placeName, apiKey) {
     請遵守以下規則：
     1. 即使名稱包含外語 (如 Pork Tamago) 或只有部分名稱，也請盡量推測最可能的沖繩知名地點 (例如：豬肉蛋飯糰)。
     2. 如果找不到該「特定分店」，請提供該「品牌」或該「地區」的一般性資訊即可，務必將 "found" 設為 true。
-    3. 回傳純 JSON 物件：
+    3. 回傳純 JSON 物件 (不要有任何 Markdown 標記或額外文字)：
     {
         "address": "請提供完整日文或英文地址 (若不確定請留空)",
         "details": "請用繁體中文介紹這個地點，包括特色美食或是什麼樣的地方 (約 50-80 字)。",
@@ -15,7 +15,7 @@ export async function fetchPlaceDetails(placeName, apiKey) {
         "type": "food", 
         "found": true
     }
-    4. Type 預設為 food。如果是景點用 check_in，購物用 shopping，住宿用 stay。
+    4. Type 預設為 food。
     `;
 
     // Trim key to avoid whitespace issues
@@ -54,10 +54,14 @@ export async function fetchPlaceDetails(placeName, apiKey) {
 
         if (!text) return null;
 
-        // Clean up markdown code blocks if present
-        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        // Robust JSON Extraction
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            console.warn("No JSON found in response:", text);
+            return null;
+        }
 
-        return JSON.parse(jsonStr);
+        return JSON.parse(jsonMatch[0]);
 
     } catch (error) {
         console.error("Gemini Fetch Error:", error);

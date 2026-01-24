@@ -592,10 +592,7 @@ function ItineraryContent() {
 
     return (
         <div className={styles.pageWrapper}>
-            <div className="container">
-                <header className={styles.header}>
-                </header>
-            </div>
+
 
             {/* Horizontal Day Navigation */}
             <motion.div
