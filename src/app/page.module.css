@@ -321,6 +321,30 @@
   flex-direction: column;
 }
 
+/* Map Highlight Animation */
+@keyframes highlightPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  }
+
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 140, 105, 0.6);
+    border-color: var(--color-coral);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.highlightCard {
+  animation: highlightPulse 1s ease-in-out;
+}
+
+
 .restCard:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);

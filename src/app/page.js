@@ -1,10 +1,12 @@
-"use client";
-import React, { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { Plane, Calendar, CreditCard, PlusCircle, PieChart, Hotel, Wallet, Sparkles, ClipboardList, MapPin, X, Utensils, Heart } from 'lucide-react';
 import { TRIP_DETAILS, LOCATION_DETAILS } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
 import styles from './page.module.css';
+
+const RestaurantMap = dynamic(() => import('@/components/RestaurantMap'), { ssr: false, loading: () => <div style={{ height: 300, background: '#f0f0f0', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>地圖載入中...</div> });
 
 const RECOMMENDED_RESTAURANTS = [
   {
@@ -14,7 +16,9 @@ const RECOMMENDED_RESTAURANTS = [
     dishes: '特選沙朗牛排、菲力牛排、自助沙拉吧',
     address: '那覇市牧志3-1-6 勉強堂ビル2F',
     mapUrl: 'https://maps.google.com/?q=Steakhouse+88+Kokusai+Dori',
-    img_url: '/images/steak_dinner.png'
+    img_url: '/images/steak_dinner.png',
+    lat: 26.2154,
+    lng: 127.6845
   },
   {
     id: 'rec_kijimuna',
@@ -23,7 +27,9 @@ const RECOMMENDED_RESTAURANTS = [
     dishes: '歐姆蛋塔可飯 (Omutaco)、甘口兒童餐',
     address: '北谷町美浜9-1 Depot Island Building C 2F',
     mapUrl: 'https://maps.google.com/?q=Taco+Rice+Cafe+Kijimunaa',
-    img_url: '/images/taco_rice.png'
+    img_url: '/images/taco_rice.png',
+    lat: 26.3170,
+    lng: 127.7570
   },
   {
     id: 'rec_yunangi',
@@ -32,7 +38,9 @@ const RECOMMENDED_RESTAURANTS = [
     dishes: '苦瓜炒蛋、沖繩紅燒肉 (Rafute)、墨魚汁湯',
     address: '那覇市久茂地3-3-3',
     mapUrl: 'https://maps.google.com/?q=Yunangi+Okinawa',
-    img_url: '/images/okinawa_soba.png'
+    img_url: '/images/okinawa_soba.png',
+    lat: 26.2144,
+    lng: 127.6811
   },
   {
     id: 'rec_blueseal',
@@ -41,7 +49,9 @@ const RECOMMENDED_RESTAURANTS = [
     dishes: '紅芋冰淇淋、鹽金楚糕冰淇淋',
     address: '沖繩各地 (推薦港川外人住宅店/國際通店)',
     mapUrl: 'https://maps.google.com/?q=Blue+Seal+Ice+Cream',
-    img_url: '/images/blue_seal.png'
+    img_url: '/images/blue_seal.png',
+    lat: 26.2647,
+    lng: 127.7028
   }
 ];
 
@@ -49,6 +59,7 @@ export default function Dashboard() {
   const [daysLeft, setDaysLeft] = useState(0);
   const [featuredSpot, setFeaturedSpot] = useState(null);
   const [selectedRest, setSelectedRest] = useState(null);
+  const scrollRefs = useRef({});
 
   useEffect(() => {
     // 1. Calculate Days Left
@@ -117,6 +128,16 @@ export default function Dashboard() {
     }
   };
 
+  const handleMarkerClick = (id) => {
+    const el = scrollRefs.current[id];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      // Highlight effect?
+      el.classList.add(styles.highlightCard);
+      setTimeout(() => el.classList.remove(styles.highlightCard), 2000);
+    }
+  };
+
   return (
     <div className={styles.dashboard}>
       <header className={styles.header}>
@@ -165,9 +186,20 @@ export default function Dashboard() {
           <h2 className={styles.sectionTitle}>Delicious Finds</h2>
           <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 600, letterSpacing: '0.05em' }}>沖繩必吃</span>
         </div>
+
+        {/* Map Integration */}
+        <div style={{ marginBottom: '1.5rem', padding: '0 0.5rem' }}>
+          <RestaurantMap restaurants={RECOMMENDED_RESTAURANTS} onMarkerClick={handleMarkerClick} />
+        </div>
+
         <div className={styles.scrollContainer}>
           {RECOMMENDED_RESTAURANTS.map(rest => (
-            <div key={rest.id} className={styles.restCard} onClick={() => setSelectedRest(rest)}>
+            <div
+              key={rest.id}
+              className={styles.restCard}
+              onClick={() => setSelectedRest(rest)}
+              ref={el => scrollRefs.current[rest.id] = el}
+            >
               <img src={rest.img_url} alt={rest.name} className={styles.restImage} />
               <div className={styles.restContent}>
                 <h3 className={styles.restName}>{rest.name}</h3>
