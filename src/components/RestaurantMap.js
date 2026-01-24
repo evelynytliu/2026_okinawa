@@ -20,10 +20,21 @@ function MapContent({ restaurants, onMarkerClick }) {
 
     useEffect(() => {
         fixIcon();
+
+        // Fit bounds to restaurants initially
+        if (restaurants.length > 0) {
+            const group = new L.featureGroup(restaurants.map(r => L.marker([r.lat, r.lng])));
+            map.fitBounds(group.getBounds(), { padding: [50, 50] });
+        }
+
         map.locate().on("locationfound", function (e) {
             setUserPos(e.latlng);
+            // Optional: Re-fit bounds to include user
+            // const bounds = map.getBounds();
+            // bounds.extend(e.latlng);
+            // map.fitBounds(bounds, { padding: [50, 50] });
         });
-    }, [map]);
+    }, [map, restaurants]);
 
     return (
         <>

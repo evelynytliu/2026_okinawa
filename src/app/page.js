@@ -47,6 +47,20 @@ const RECOMMENDED_RESTAURANTS = [
     tag: '晚餐推薦'
   },
   {
+    id: 'rec_yunangi',
+    name: 'Yunangi (ゆうなんぎい)',
+    intro: '【鄉土料理】國際通巷弄內的排隊名店，正宗且溫馨的沖繩家庭料理。推薦品嚐道地的苦瓜炒蛋與入口即化的紅燒肉，很有在當地人家吃飯的感覺。',
+    dishes: '苦瓜炒蛋、沖繩紅燒肉 (Rafute)、墨魚汁湯',
+    address: '那覇市松山1-3-18 (附近)', // Using generic or keep original address
+    // Re-using original address: 那覇市久茂地3-3-3
+    address: '那覇市久茂地3-3-3',
+    mapUrl: 'https://maps.google.com/?q=Yunangi+Okinawa',
+    img_url: '/images/okinawa_soba.png',
+    lat: 26.2144,
+    lng: 127.6811,
+    tag: '晚餐推薦'
+  },
+  {
     id: 'rec_kijimuna',
     name: 'Taco Rice Cafe Kijimuna',
     intro: '【親子友善】美國村午餐首選。滑嫩歐姆蛋鋪在塔可飯上，口味溫和，小朋友也能開心享用。位於美國村中心，方便逛街前後用餐。',
@@ -69,6 +83,30 @@ const RECOMMENDED_RESTAURANTS = [
     lat: 26.2750,
     lng: 127.7350,
     tag: '晚餐推薦'
+  },
+  {
+    id: 'rec_posillipo',
+    name: 'POSILLIPO (瀨長島)',
+    intro: '【海景餐廳】位於瀨長島制高點的義大利餐廳，擁有絕美海景露台。提供現烤披薩與義大利麵，空間寬敞舒適，是欣賞飛機起降與夕陽的最佳位置，非常適合團體用餐。',
+    dishes: '瑪格麗特披薩、海鮮義大利麵',
+    address: '豊見城市瀬長174-5',
+    mapUrl: 'https://maps.google.com/?q=POSILLIPO+cucina+meridionale',
+    img_url: '/images/posillipo.png',
+    lat: 26.1761,
+    lng: 127.6432,
+    tag: '景觀餐廳'
+  },
+  {
+    id: 'rec_pizzain',
+    name: 'Pizza In (美式披薩)',
+    intro: '【美式吃到飽】位於中部（近知花住宿）的美式披薩自助餐。充滿濃濃美國風情，提供多種口味披薩、義大利麵、沙拉吧與飲料喝到飽，CP值高且氣氛歡樂。',
+    dishes: '美式披薩、塔可飯、自助沙拉',
+    address: '沖縄県北谷町砂辺368 (或各分店)',
+    mapUrl: 'https://maps.google.com/?q=Pizza+In+Okinawa',
+    img_url: '/images/pizzain.png',
+    lat: 26.3280,
+    lng: 127.7440,
+    tag: '住宿周邊'
   },
   {
     id: 'rec_blueseal',
