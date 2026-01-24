@@ -229,16 +229,13 @@
 .dayNumberLabel {
     position: absolute;
     right: 0;
-    top: 0;
+    top: 5px;
     font-size: 0.85rem;
-    color: #FFFFFF;
-    background: var(--color-teal);
+    color: var(--text-muted);
     font-family: var(--font-sans);
-    font-weight: 700;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    padding: 0.3rem 0.8rem;
-    border-radius: 100px;
 }
 
 .weatherWrapper {
