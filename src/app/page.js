@@ -2,6 +2,7 @@
 import dynamic from 'next/dynamic';
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Plane, Calendar, CreditCard, Plus, PieChart, Hotel, Wallet, Sparkles, ClipboardList, MapPin, X, Utensils, Heart, Trash2, Edit, Loader2, Search } from 'lucide-react';
 import { TRIP_DETAILS, LOCATION_DETAILS } from '@/lib/data';
 import { fetchPlaceDetails } from '@/lib/gemini';
@@ -124,6 +125,7 @@ const RECOMMENDED_RESTAURANTS = [
 ];
 
 export default function Dashboard() {
+  const router = useRouter();
   const [daysLeft, setDaysLeft] = useState(0);
   const [featuredSpot, setFeaturedSpot] = useState(null);
   const [selectedRest, setSelectedRest] = useState(null);
@@ -134,6 +136,14 @@ export default function Dashboard() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newRestName, setNewRestName] = useState('');
   const [adding, setAdding] = useState(false);
+  const [hiddenRecIds, setHiddenRecIds] = useState([]);
+
+  useEffect(() => {
+    // Load hidden recommendation IDs from localStorage
+    const saved = localStorage.getItem('hidden_recommendations');
+    if (saved) setHiddenRecIds(JSON.parse(saved));
+    fetchDbRestaurants();
+  }, []);
 
   const fetchDbRestaurants = async () => {
     if (!supabase) return;
@@ -164,7 +174,41 @@ export default function Dashboard() {
 
   useEffect(() => { fetchDbRestaurants(); }, []);
 
-  const allRestaurants = [...RECOMMENDED_RESTAURANTS, ...dbRestaurants];
+  const allRestaurants = [
+    ...RECOMMENDED_RESTAURANTS.filter(r => !hiddenRecIds.includes(r.id)),
+    ...dbRestaurants
+  ];
+
+  const handleEditRestaurant = async (e, rest) => {
+    e.stopPropagation();
+    if (!rest.isDb) {
+      // Migrate to DB before editing
+      if (!confirm(`要開始編輯「${rest.name}」嗎？這會將其轉為您的自訂地點。`)) return;
+      try {
+        const { error } = await supabase.from('locations').upsert({
+          id: rest.id, // Keep the same ID or generate new? Use same for rec_
+          name: rest.name,
+          address: rest.address,
+          details: rest.intro,
+          img_url: rest.img_url,
+          type: 'food',
+          lat: rest.lat,
+          lng: rest.lng
+        });
+        if (error) throw error;
+        // After migrating, hide the static version
+        const newHidden = [...hiddenRecIds, rest.id];
+        setHiddenRecIds(newHidden);
+        localStorage.setItem('hidden_recommendations', JSON.stringify(newHidden));
+        fetchDbRestaurants(); // Reload DB list
+        router.push(`/itinerary/edit/${rest.id}`);
+      } catch (err) {
+        alert("初始化編輯失敗：" + err.message);
+      }
+    } else {
+      router.push(`/itinerary/edit/${rest.id}`);
+    }
+  };
 
   const handleAddRestaurant = async () => {
     if (!newRestName.trim()) return alert("請輸入餐廳名稱");
@@ -218,12 +262,21 @@ export default function Dashboard() {
   const handleDeleteRestaurant = async (e, id) => {
     e.stopPropagation();
     if (!confirm("確定要刪除此餐廳嗎？無法復原。")) return;
-    try {
-      const { error } = await supabase.from('locations').delete().eq('id', id);
-      if (error) throw error;
-      fetchDbRestaurants();
-    } catch (e) {
-      alert("刪除失敗: " + e.message);
+
+    if (id.startsWith('rec_')) {
+      // It's a static recommendation, just hide it
+      const newHidden = [...hiddenRecIds, id];
+      setHiddenRecIds(newHidden);
+      localStorage.setItem('hidden_recommendations', JSON.stringify(newHidden));
+      alert("已移除推薦餐廳。您可以隨時重新整理回復原始狀態。");
+    } else {
+      try {
+        const { error } = await supabase.from('locations').delete().eq('id', id);
+        if (error) throw error;
+        fetchDbRestaurants();
+      } catch (e) {
+        alert("刪除失敗: " + e.message);
+      }
     }
   };
 
@@ -391,20 +444,19 @@ export default function Dashboard() {
                 <div className={styles.restActions}>
                   <button className={styles.btnDetail}>查看</button>
 
-                  {rest.isDb ? (
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <Link href={`/itinerary/edit/${rest.id}`} onClick={e => e.stopPropagation()} style={{ color: '#666', padding: '4px', display: 'flex', alignItems: 'center' }}>
-                        <Edit size={18} />
-                      </Link>
-                      <button onClick={(e) => handleDeleteRestaurant(e, rest.id)} style={{ background: 'none', border: 'none', color: '#ff4d4f', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}>
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  ) : (
-                    <button className={styles.btnWish} onClick={(e) => handleAddWish(e, rest)} title="加入許願池">
-                      <Heart size={18} fill="white" />
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={(e) => handleEditRestaurant(e, rest)} style={{ background: 'none', border: 'none', color: '#666', padding: '4px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                      <Edit size={18} />
                     </button>
-                  )}
+                    <button onClick={(e) => handleDeleteRestaurant(e, rest.id)} style={{ background: 'none', border: 'none', color: '#ff4d4f', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}>
+                      <Trash2 size={18} />
+                    </button>
+                    {!rest.isDb && (
+                      <button className={styles.btnWish} onClick={(e) => handleAddWish(e, rest)} title="加入許願池" style={{ padding: '4px' }}>
+                        <Heart size={18} color="var(--color-orange)" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

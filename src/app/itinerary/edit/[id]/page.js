@@ -230,6 +230,8 @@ export default function EditLocationPage() {
                 if (result.details) setDetails(result.details);
                 if (result.note) setNote(result.note);
                 if (result.type) setType(result.type);
+                if (result.lat) setLat(result.lat);
+                if (result.lng) setLng(result.lng);
                 alert('✨ AI 資料已自動填入！');
             } else {
                 setErrorInfo({ title: '找不到相關資訊', message: '雖然成功連線，但 AI 回報找不到詳細資訊。請嘗試更換名稱。' });
@@ -248,6 +250,10 @@ export default function EditLocationPage() {
 
     // Images: Array of objects
     // { id: string, url: string, file?: File, previewUrl?: string }
+    // NEW: Lat/Lng for Map
+    const [lat, setLat] = useState(null);
+    const [lng, setLng] = useState(null);
+
     const [images, setImages] = useState([]);
     const [initialImages, setInitialImages] = useState([]); // Track for dehydration
 
@@ -269,9 +275,12 @@ export default function EditLocationPage() {
         };
     }, []);
 
+    const [isLocationMode, setIsLocationMode] = useState(false);
+
     const fetchItemDetails = async () => {
         try {
-            const { data, error } = await supabase
+            // Attempt 1: Try fetching as Itinerary Item
+            let { data, error } = await supabase
                 .from('itinerary_items')
                 .select(`
                     id,
@@ -292,6 +301,29 @@ export default function EditLocationPage() {
                 .eq('id', itemId)
                 .single();
 
+            // Attempt 2: If not found, try fetching as direct Location
+            if (error || !data) {
+                const { data: locData, error: locError } = await supabase
+                    .from('locations')
+                    .select('*')
+                    .eq('id', itemId)
+                    .single();
+
+                if (locData) {
+                    // Structure matches what the UI expects
+                    data = {
+                        id: null, // No itinerary ID
+                        note: '',
+                        location_id: locData.id,
+                        location: locData
+                    };
+                    error = null;
+                    setIsLocationMode(true);
+                } else if (error) {
+                    throw error; // Throw original error if both failed
+                }
+            }
+
             if (error) throw error;
             if (data) {
                 setItemData(data);
@@ -300,6 +332,8 @@ export default function EditLocationPage() {
                 setAddress(data.location.address || '');
                 setDetails(data.location.details || '');
                 setAttachments(data.location.attachments || []);
+                setLat(data.location.lat || null);
+                setLng(data.location.lng || null);
 
                 // Set Type and Hotel (handle missing columns if DB not updated yet)
                 setType(data.location.type || 'spot');
@@ -533,18 +567,46 @@ export default function EditLocationPage() {
                     gallery: dbUrls,
                     attachments: attachments,
                     type: type,
-                    hotel_id: type === 'stay' ? hotelId : null
+                    hotel_id: type === 'stay' ? hotelId : null,
+                    lat: lat,
+                    lng: lng
                 })
-                .eq('id', itemData.location_id);
+                .eq('id', itemData.location_id); // Fixed: Use itemData
 
-            if (locError) throw locError;
+            if (locError) {
+                // Fallback for missing columns or schema cache issues
+                const isMissingColumn = locError.message?.includes('column "lat" does not exist') ||
+                    locError.message?.includes("find the 'lat' column") ||
+                    locError.message?.includes("schema cache");
 
-            const { error: itemError } = await supabase
-                .from('itinerary_items')
-                .update({ note: note })
-                .eq('id', itemId);
+                if (isMissingColumn) {
+                    const { error: retryError } = await supabase
+                        .from('locations')
+                        .update({
+                            name: name,
+                            address: address,
+                            details: details,
+                            img_url: finalImgUrl,
+                            gallery: dbUrls,
+                            attachments: attachments,
+                            type: type,
+                            hotel_id: type === 'stay' ? hotelId : null
+                        })
+                        .eq('id', itemData.location_id);
+                    if (retryError) throw retryError;
+                } else {
+                    throw locError;
+                }
+            }
 
-            if (itemError) throw itemError;
+            if (!isLocationMode) {
+                const { error: itemError } = await supabase
+                    .from('itinerary_items')
+                    .update({ note: note })
+                    .eq('id', itemId);
+
+                if (itemError) throw itemError;
+            }
 
             router.refresh(); // Refresh server state
             router.back();
