@@ -303,8 +303,27 @@ function ExpensesPageContent() {
                 </div>
             )}
 
-            <Link href="/expenses/add" className={styles.fab}>
-                <PlusCircle size={32} />
+            <Link href="/expenses/add" className={styles.fab} style={{
+                bottom: '130px',
+                zIndex: 2147483647,
+                width: '68px',
+                height: '68px',
+                borderRadius: '50%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                gap: '0px',
+                background: 'var(--color-coral)',
+                color: 'white',
+                position: 'fixed',
+                right: '1.5rem',
+                boxShadow: '0 4px 12px rgba(255, 140, 105, 0.4)',
+                textDecoration: 'none'
+            }}>
+                <Plus size={32} strokeWidth={2.5} />
+                <span style={{ fontSize: '11px', lineHeight: 1, fontWeight: 700 }}>記帳</span>
             </Link>
         </div>
     );
