@@ -18,6 +18,12 @@ export async function fetchPlaceDetails(placeName, apiKey) {
     4. Type 預設為 food。如果是景點用 check_in，購物用 shopping，住宿用 stay。
     `;
 
+    // Basic validation
+    if (!apiKey.startsWith('AIza')) {
+        console.error("Invalid API Key format (should start with AIza)");
+        return null;
+    }
+
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
@@ -32,8 +38,9 @@ export async function fetchPlaceDetails(placeName, apiKey) {
         });
 
         if (!response.ok) {
-            console.error("Gemini API Error", response.statusText);
-            return null;
+            const errorText = await response.text();
+            console.error("Gemini API Error:", response.status, errorText);
+            throw new Error(`API Error: ${response.status} - ${errorText}`);
         }
 
         const data = await response.json();
