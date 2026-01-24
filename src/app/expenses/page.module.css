@@ -233,10 +233,10 @@
 
 .fab {
     position: fixed;
-    bottom: 5rem;
+    bottom: 6rem;
     right: 1.5rem;
-    width: 56px;
-    height: 56px;
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
     background: var(--color-coral);
     color: white;
