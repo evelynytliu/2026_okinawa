@@ -1,15 +1,54 @@
-
 "use client";
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plane, Calendar, CreditCard, PlusCircle, PieChart, Hotel, Wallet, Sparkles, ClipboardList } from 'lucide-react';
+import { Plane, Calendar, CreditCard, PlusCircle, PieChart, Hotel, Wallet, Sparkles, ClipboardList, MapPin, X, Utensils, Heart } from 'lucide-react';
 import { TRIP_DETAILS, LOCATION_DETAILS } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
 import styles from './page.module.css';
 
+const RECOMMENDED_RESTAURANTS = [
+  {
+    id: 'rec_steak88',
+    name: 'Steakhouse 88',
+    intro: '沖繩經典老牌牛排館，70年歷史的美味傳承。提供多樣化的牛排選擇與無限量沙拉吧。濃厚的美式復古氛圍，適合家庭聚餐的大份量滿足感。',
+    dishes: '特選沙朗牛排、菲力牛排、自助沙拉吧',
+    address: '那覇市牧志3-1-6 勉強堂ビル2F',
+    mapUrl: 'https://maps.google.com/?q=Steakhouse+88+Kokusai+Dori',
+    img_url: '/images/steak_dinner.png'
+  },
+  {
+    id: 'rec_kijimuna',
+    name: 'Taco Rice Cafe Kijimuna',
+    intro: '位於美國村的超人氣塔可飯專賣店。滑嫩的歐姆蛋鋪在香氣四溢的塔可肉醬上，這就是傳說中的「歐姆蛋塔可飯」，大人小孩都愛的沖繩靈魂美食。',
+    dishes: '歐姆蛋塔可飯 (Omutaco)、甘口兒童餐',
+    address: '北谷町美浜9-1 Depot Island Building C 2F',
+    mapUrl: 'https://maps.google.com/?q=Taco+Rice+Cafe+Kijimunaa',
+    img_url: '/images/taco_rice.png'
+  },
+  {
+    id: 'rec_yunangi',
+    name: 'Yunangi (ゆうなんぎい)',
+    intro: '國際通巷弄內的在地名店，排隊也要吃到的正宗沖繩鄉土料理。氛圍溫馨，能品嚐到最道地的沖繩苦瓜炒蛋與入口即化的紅燒肉。',
+    dishes: '苦瓜炒蛋、沖繩紅燒肉 (Rafute)、墨魚汁湯',
+    address: '那覇市久茂地3-3-3',
+    mapUrl: 'https://maps.google.com/?q=Yunangi+Okinawa',
+    img_url: '/images/okinawa_soba.png'
+  },
+  {
+    id: 'rec_blueseal',
+    name: 'Blue Seal Ice Cream',
+    intro: '源自美國、成長於沖繩的冰淇淋品牌。以色彩繽紛與豐富口味聞名，擁有超過30種口味，包括沖繩限定的紅芋、鹽金楚糕口味。',
+    dishes: '紅芋冰淇淋、鹽金楚糕冰淇淋',
+    address: '沖繩各地 (推薦港川外人住宅店/國際通店)',
+    mapUrl: 'https://maps.google.com/?q=Blue+Seal+Ice+Cream',
+    img_url: '/images/blue_seal.png'
+  }
+];
+
 export default function Dashboard() {
   const [daysLeft, setDaysLeft] = useState(0);
   const [featuredSpot, setFeaturedSpot] = useState(null);
+  const [selectedRest, setSelectedRest] = useState(null);
 
   useEffect(() => {
     // 1. Calculate Days Left
@@ -52,6 +91,32 @@ export default function Dashboard() {
     fetchFeatured();
   }, []);
 
+  const handleAddWish = async (e, rest) => {
+    e.stopPropagation();
+    if (!confirm(`想把「${rest.name}」加入心願清單嗎？`)) return;
+
+    if (!supabase) {
+      alert("展示模式無法儲存");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('locations')
+        .insert({
+          id: crypto.randomUUID(),
+          name: rest.name,
+          details: `[推薦餐廳]\n${rest.intro}\n\n必點：${rest.dishes}\n\n地址：${rest.address}\n地圖：${rest.mapUrl}`,
+          address: rest.address,
+          img_url: rest.img_url // Also save the image!
+        });
+      if (error) throw error;
+      alert("已加入許願池！");
+    } catch (err) {
+      alert("加入失敗：" + err.message);
+    }
+  };
+
   return (
     <div className={styles.dashboard}>
       <header className={styles.header}>
@@ -93,6 +158,31 @@ export default function Dashboard() {
           </div>
         </Link>
       )}
+
+      {/* Recommended Restaurants Section */}
+      <section className={`${styles.restaurantSection} fade-in`}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Delicious Finds</h2>
+          <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 600, letterSpacing: '0.05em' }}>沖繩必吃</span>
+        </div>
+        <div className={styles.scrollContainer}>
+          {RECOMMENDED_RESTAURANTS.map(rest => (
+            <div key={rest.id} className={styles.restCard} onClick={() => setSelectedRest(rest)}>
+              <img src={rest.img_url} alt={rest.name} className={styles.restImage} />
+              <div className={styles.restContent}>
+                <h3 className={styles.restName}>{rest.name}</h3>
+                <p className={styles.restIntro}>{rest.intro}</p>
+                <div className={styles.restActions}>
+                  <button className={styles.btnDetail}>查看詳情</button>
+                  <button className={styles.btnWish} onClick={(e) => handleAddWish(e, rest)} title="加入許願池">
+                    <Heart size={18} fill="white" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div className={styles.bentoGrid}>
         {/* Primary Action: Add Expense (Tall - spans 2 rows in CSS if supported, or just distinct style) */}
@@ -141,6 +231,51 @@ export default function Dashboard() {
           <span className={styles.cardLabel}>許願池</span>
         </Link>
       </div>
+
+      {/* Restaurant Modal */}
+      {selectedRest && (
+        <div className={styles.modalOverlay} onClick={() => setSelectedRest(null)}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <button className={styles.closeBtn} onClick={() => setSelectedRest(null)}>
+              <X size={20} color="#333" />
+            </button>
+            <img src={selectedRest.img_url} className={styles.modalImage} alt={selectedRest.name} />
+            <div className={styles.modalBody}>
+              <h3 className={styles.modalTitle}>{selectedRest.name}</h3>
+
+              <div className={styles.modalSection}>
+                <span className={styles.sectionLabel}>簡介</span>
+                <p className={styles.modalText}>{selectedRest.intro}</p>
+              </div>
+
+              <div className={styles.modalSection}>
+                <span className={styles.sectionLabel}>推薦餐點</span>
+                <p className={styles.modalText} style={{ color: 'var(--color-coral)', fontWeight: 'bold' }}>
+                  <Utensils size={14} style={{ display: 'inline', marginRight: 5 }} />
+                  {selectedRest.dishes}
+                </p>
+              </div>
+
+              <div className={styles.modalSection}>
+                <span className={styles.sectionLabel}>地址</span>
+                <p className={styles.modalText} style={{ fontSize: '0.9rem', color: '#666' }}>
+                  {selectedRest.address}
+                </p>
+              </div>
+            </div>
+            <div className={styles.modalFooter}>
+              <a href={selectedRest.mapUrl} target="_blank" rel="noreferrer" className={styles.btnMap}>
+                <MapPin size={16} /> 導航
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FAB */}
+      <Link href="/expenses/add" className={styles.fab}>
+        <PlusCircle size={32} />
+      </Link>
     </div>
   );
 }

@@ -249,6 +249,258 @@
   color: white;
 }
 
-.bentoCard:hover .cardIcon {
-  transform: scale(1.1) rotate(-5deg);
+
+.fab {
+  position: fixed;
+  bottom: 2rem;
+  right: 1.5rem;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-coral);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(255, 140, 105, 0.4);
+  transition: transform 0.2s;
+  z-index: 900;
+}
+
+.fab:active {
+  transform: scale(0.9);
+}
+
+/* Restaurant Dashboard */
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+  padding: 0 0.5rem;
+}
+
+.sectionTitle {
+  font-size: 1.5rem;
+  font-family: var(--font-serif);
+  color: var(--color-ink);
+  border-bottom: 3px solid var(--color-gold);
+  display: inline-block;
+  line-height: 1;
+  padding-bottom: 5px;
+}
+
+.scrollContainer {
+  display: flex;
+  overflow-x: auto;
+  gap: 1rem;
+  padding: 0.5rem;
+  padding-bottom: 1.5rem;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  margin: 0 -1rem;
+  /* Negative margin for edge-to-edge scroll on mobile */
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.scrollContainer::-webkit-scrollbar {
+  display: none;
+}
+
+.restCard {
+  flex: 0 0 280px;
+  background: #fff;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  scroll-snap-align: center;
+  border: 1px solid #eee;
+  transition: transform 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.restCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.restImage {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+}
+
+.restContent {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.restName {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--color-ink);
+  font-family: var(--font-serif);
+}
+
+.restIntro {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+.restActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.btnDetail {
+  flex: 1;
+  padding: 0.6rem;
+  background: #f5f5f5;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--color-ink);
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btnDetail:hover {
+  background: #e0e0e0;
+}
+
+.btnWish {
+  width: 40px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-coral);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btnWish:hover {
+  background: #be123c;
+}
+
+/* Modal Styles */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  backdrop-filter: blur(5px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modalContent {
+  background: white;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  border-radius: var(--radius-lg);
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.modalImage {
+  width: 100%;
+  height: 250px;
+  object-fit: cover;
+}
+
+.closeBtn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.modalBody {
+  padding: 1.5rem;
+}
+
+.modalTitle {
+  font-family: var(--font-serif);
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-ink);
+}
+
+.modalSection {
+  margin-bottom: 1.5rem;
+}
+
+.sectionLabel {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.3rem;
+  display: block;
+}
+
+.modalText {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #444;
+}
+
+.modalFooter {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #eee;
+  background: #fafafa;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btnMap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.5rem;
+  background: var(--color-ink);
+  color: white;
+  border-radius: 100px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
