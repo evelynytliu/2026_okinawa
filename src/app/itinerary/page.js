@@ -642,7 +642,7 @@ function ItineraryContent() {
                                     <span className={styles.dateLabel}>{dayItem.date_display?.slice(8)}</span>
                                     <span className={styles.weekdayLabel}>{getWeekday(dayItem.date_display).slice(2)}</span>
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1, marginLeft: '1rem', justifyContent: 'center' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1, justifyContent: 'center' }}>
                                     <h3 style={{ margin: 0, fontSize: '1rem' }}>{dayItem.title}</h3>
                                 </div>
 
