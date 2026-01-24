@@ -161,6 +161,23 @@ function ItineraryContent() {
     const [activeDayIndex, setActiveDayIndex] = useState(0);
     const timelineRef = React.useRef(null);
     const dayRefs = React.useRef([]);
+    const navContainerRef = React.useRef(null);
+
+    // Auto-scroll Nav Bar to keep active day centered
+    useEffect(() => {
+        if (navContainerRef.current && typeof activeDayIndex === 'number') {
+            const container = navContainerRef.current;
+            const activeItem = container.children[activeDayIndex];
+
+            if (activeItem) {
+                const scrollLeft = activeItem.offsetLeft - (container.clientWidth / 2) + (activeItem.clientWidth / 2);
+                container.scrollTo({
+                    left: scrollLeft,
+                    behavior: 'smooth'
+                });
+            }
+        }
+    }, [activeDayIndex]);
 
     // Custom Draggable Scroll Implementation
     useEffect(() => {
@@ -562,6 +579,7 @@ function ItineraryContent() {
             >
                 <div className={styles.navLabel}>Day</div>
                 <motion.div
+                    ref={navContainerRef}
                     className={styles.navContainer}
                     initial="hidden"
                     animate="visible"
