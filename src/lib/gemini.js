@@ -25,8 +25,8 @@ export async function fetchPlaceDetails(placeName, apiKey) {
     }
 
     try {
-        // Fallback to gemini-pro on stable v1 endpoint
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${cleanKey}`, {
+        // Using gemini-1.5-flash (Standard free tier model)
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${cleanKey}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -48,6 +48,11 @@ export async function fetchPlaceDetails(placeName, apiKey) {
                     errMsg = errJson.error.message;
                 }
             } catch (e) { }
+
+            if (response.status === 404) {
+                // Specific guidance for "Model not found" -> Project issue
+                return { error: "找不到模型 (404)。您的 API Key 所在專案可能未啟用權限。\n\n💡 解決方法：\n請回到 Google AI Studio，點擊 'Create API key'，並選擇 'Create API key in new project' (建立新專案)，使用新專案的 Key 即可解決。" };
+            }
 
             return { error: errMsg };
         }
