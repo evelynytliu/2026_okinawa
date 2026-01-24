@@ -2,8 +2,9 @@
 import dynamic from 'next/dynamic';
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { Plane, Calendar, CreditCard, Plus, PieChart, Hotel, Wallet, Sparkles, ClipboardList, MapPin, X, Utensils, Heart } from 'lucide-react';
+import { Plane, Calendar, CreditCard, Plus, PieChart, Hotel, Wallet, Sparkles, ClipboardList, MapPin, X, Utensils, Heart, Trash2, Edit, Loader2, Search } from 'lucide-react';
 import { TRIP_DETAILS, LOCATION_DETAILS } from '@/lib/data';
+import { fetchPlaceDetails } from '@/lib/gemini';
 import { supabase } from '@/lib/supabase';
 import styles from './page.module.css';
 
@@ -128,6 +129,102 @@ export default function Dashboard() {
   const [selectedRest, setSelectedRest] = useState(null);
   const scrollRefs = useRef({});
 
+  // --- NEW: Restaurant Management ---
+  const [dbRestaurants, setDbRestaurants] = useState([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newRestName, setNewRestName] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  const fetchDbRestaurants = async () => {
+    if (!supabase) return;
+    try {
+      const { data } = await supabase
+        .from('locations')
+        .select('*')
+        .in('type', ['food', 'restaurant', 'cafe', 'bar', 'dessert']);
+
+      if (data) {
+        const mapped = data.map(d => ({
+          id: d.id,
+          name: d.name,
+          intro: d.details || '暫無介紹',
+          dishes: '',
+          address: d.address || '',
+          mapUrl: `https://maps.google.com/?q=${encodeURIComponent(d.name)}`,
+          img_url: d.img_url || '/images/food_placeholder.jpg',
+          lat: d.lat || 26.2124,
+          lng: d.lng || 127.6809,
+          tag: '我的收藏',
+          isDb: true
+        }));
+        setDbRestaurants(mapped);
+      }
+    } catch (e) { console.error("Fetch restaurants error", e); }
+  };
+
+  useEffect(() => { fetchDbRestaurants(); }, []);
+
+  const allRestaurants = [...RECOMMENDED_RESTAURANTS, ...dbRestaurants];
+
+  const handleAddRestaurant = async () => {
+    if (!newRestName.trim()) return alert("請輸入餐廳名稱");
+
+    setAdding(true);
+    try {
+      const key = localStorage.getItem('gemini_api_key');
+      const aiData = await fetchPlaceDetails(newRestName, key);
+
+      if (aiData?.error) throw new Error(aiData.error);
+
+      let insertData = {
+        name: newRestName,
+        type: 'food',
+        details: aiData?.details || '',
+        address: aiData?.address || '',
+        lat: aiData?.lat || null,
+        lng: aiData?.lng || null
+      };
+      if (aiData?.found) {
+        // Use AI details
+      }
+
+      const { error } = await supabase.from('locations').insert([insertData]);
+      if (error) {
+        // Fallback: if lat/lng missing column error, try without
+        if (error.message.includes('lat')) {
+          delete insertData.lat;
+          delete insertData.lng;
+          const { error: err2 } = await supabase.from('locations').insert([insertData]);
+          if (err2) throw err2;
+        } else {
+          throw error;
+        }
+      }
+
+      alert("餐廳已新增！");
+      setShowAddModal(false);
+      setNewRestName('');
+      fetchDbRestaurants();
+    } catch (e) {
+      console.error(e);
+      alert("新增失敗: " + e.message);
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleDeleteRestaurant = async (e, id) => {
+    e.stopPropagation();
+    if (!confirm("確定要刪除此餐廳嗎？無法復原。")) return;
+    try {
+      const { error } = await supabase.from('locations').delete().eq('id', id);
+      if (error) throw error;
+      fetchDbRestaurants();
+    } catch (e) {
+      alert("刪除失敗: " + e.message);
+    }
+  };
+
   useEffect(() => {
     // 1. Calculate Days Left
     const today = new Date();
@@ -249,39 +346,106 @@ export default function Dashboard() {
 
       {/* Recommended Restaurants Section */}
       <section className={`${styles.restaurantSection} fade-in`}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Delicious Finds</h2>
-          <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 600, letterSpacing: '0.05em' }}>沖繩必吃</span>
+        <div className={styles.sectionHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2 className={styles.sectionTitle}>Delicious Finds</h2>
+            <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 600, letterSpacing: '0.05em' }}>沖繩必吃</span>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            style={{
+              background: 'var(--color-orange, #f97316)', color: 'white', border: 'none',
+              borderRadius: '20px', padding: '6px 12px', fontSize: '0.85rem',
+              fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+              boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+            }}
+          >
+            <Plus size={16} /> 新增
+          </button>
         </div>
 
         {/* Map Integration */}
         <div style={{ marginBottom: '1.5rem', padding: '0 0.5rem' }}>
-          <RestaurantMap restaurants={RECOMMENDED_RESTAURANTS} onMarkerClick={handleMarkerClick} />
+          <RestaurantMap restaurants={allRestaurants} onMarkerClick={handleMarkerClick} />
         </div>
 
         <div className={styles.scrollContainer}>
-          {RECOMMENDED_RESTAURANTS.map(rest => (
+          {allRestaurants.map(rest => (
             <div
               key={rest.id}
               className={styles.restCard}
               onClick={() => setSelectedRest(rest)}
               ref={el => scrollRefs.current[rest.id] = el}
+              style={rest.isDb ? { border: '2px solid var(--color-orange, #f97316)' } : {}}
             >
-              <img src={rest.img_url} alt={rest.name} className={styles.restImage} />
+              <img src={rest.img_url || '/images/taco_rice.png'} alt={rest.name} className={styles.restImage}
+                onError={(e) => e.target.src = '/images/taco_rice.png'} />
               <div className={styles.restContent}>
-                <h3 className={styles.restName}>{rest.name}</h3>
+                <h3 className={styles.restName}>
+                  {rest.name}
+                  {rest.isDb && <span style={{ fontSize: '0.6rem', background: '#ffe0b2', color: '#e65100', padding: '2px 6px', borderRadius: '4px', marginLeft: '6px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>自訂</span>}
+                </h3>
                 <p className={styles.restIntro}>{rest.intro}</p>
                 <div className={styles.restActions}>
-                  <button className={styles.btnDetail}>查看詳情</button>
-                  <button className={styles.btnWish} onClick={(e) => handleAddWish(e, rest)} title="加入許願池">
-                    <Heart size={18} fill="white" />
-                  </button>
+                  <button className={styles.btnDetail}>查看</button>
+
+                  {rest.isDb ? (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <Link href={`/itinerary/edit/${rest.id}`} onClick={e => e.stopPropagation()} style={{ color: '#666', padding: '4px', display: 'flex', alignItems: 'center' }}>
+                        <Edit size={18} />
+                      </Link>
+                      <button onClick={(e) => handleDeleteRestaurant(e, rest.id)} style={{ background: 'none', border: 'none', color: '#ff4d4f', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}>
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button className={styles.btnWish} onClick={(e) => handleAddWish(e, rest)} title="加入許願池">
+                      <Heart size={18} fill="white" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           ))}
         </div>
       </section>
+
+      {/* Add Modal */}
+      {showAddModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowAddModal(false)}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '350px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 className={styles.modalTitle} style={{ margin: 0 }}>新增餐廳</h3>
+              <button onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+
+            <div style={{ margin: '1rem 0' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold', color: '#555' }}>餐廳名稱</label>
+              <input
+                value={newRestName}
+                onChange={e => setNewRestName(e.target.value)}
+                placeholder="例如：暖暮拉麵"
+                style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '1px solid #ddd', fontSize: '1rem' }}
+                autoFocus
+              />
+            </div>
+            <button
+              onClick={handleAddRestaurant}
+              disabled={adding}
+              style={{
+                width: '100%', padding: '0.8rem', background: 'var(--color-orange, #f97316)',
+                color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold',
+                opacity: adding ? 0.7 : 1, cursor: adding ? 'not-allowed' : 'pointer',
+                display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px',
+                marginTop: '1.5rem', boxShadow: '0 4px 10px rgba(249, 115, 22, 0.3)'
+              }}
+            >
+              {adding ? <Loader2 className="animate-spin" /> : <Sparkles size={18} />}
+              {adding ? 'AI 分析生成中...' : '使用 AI 自動新增'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className={styles.bentoGrid}>
         {/* Secondary Action: Itinerary (Dark) - Promoted to first position */}

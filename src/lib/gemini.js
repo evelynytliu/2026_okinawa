@@ -10,6 +10,8 @@ export async function fetchPlaceDetails(placeName, apiKey) {
     3. 回傳純 JSON 物件 (不要有任何 Markdown 標記或額外文字)：
     {
         "address": "請提供完整日文或英文地址 (若不確定請留空)",
+        "lat": 26.2123 (數值, 緯度),
+        "lng": 127.6792 (數值, 經度),
         "details": "請用繁體中文介紹這個地點，包括特色美食或是什麼樣的地方 (約 50-80 字)。",
         "note": "一句話短評或推薦 (15字以內)",
         "type": "food", 
