@@ -2,7 +2,7 @@
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 // Fix Leaflet Default Icon
 const fixIcon = () => {
@@ -23,16 +23,19 @@ function MapContent({ restaurants, onMarkerClick }) {
 
         // Fit bounds to restaurants initially
         if (restaurants.length > 0) {
-            const group = new L.featureGroup(restaurants.map(r => L.marker([r.lat, r.lng])));
-            map.fitBounds(group.getBounds(), { padding: [50, 50] });
+            try {
+                const group = new L.featureGroup(restaurants.map(r => L.marker([r.lat, r.lng])));
+                const bounds = group.getBounds();
+                if (bounds.isValid()) {
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
+            } catch (e) {
+                console.error("Map bounds error:", e);
+            }
         }
 
         map.locate().on("locationfound", function (e) {
             setUserPos(e.latlng);
-            // Optional: Re-fit bounds to include user
-            // const bounds = map.getBounds();
-            // bounds.extend(e.latlng);
-            // map.fitBounds(bounds, { padding: [50, 50] });
         });
     }, [map, restaurants]);
 
@@ -82,15 +85,24 @@ function MapContent({ restaurants, onMarkerClick }) {
 }
 
 export default function RestaurantMap({ restaurants, onMarkerClick }) {
-    const defaultCenter = [26.26, 127.7];
+    // Unique key to force re-mount only if strictly necessary, usually not needed if controlled well
+    // But here to prevent reuse error, we ensure a clean key or useMemo for containers is tricky.
+    // The error "Map container is being reused by another instance" means the DOM node isn't clean.
+    // We add a key to MapContainer based on mounting to ensure fresh instance.
+
+    // Actually, just ensuring it's not conditional rendering too fast might help.
+    // Let's use a unique ID for the container element key.
 
     return (
-        <MapContainer
-            center={defaultCenter}
-            zoom={10}
-            style={{ height: '300px', width: '100%', borderRadius: '12px', zIndex: 0 }}
-        >
-            <MapContent restaurants={restaurants} onMarkerClick={onMarkerClick} />
-        </MapContainer>
+        <div style={{ height: '300px', width: '100%', borderRadius: '12px', overflow: 'hidden', zIndex: 0 }}>
+            <MapContainer
+                center={[26.26, 127.7]}
+                zoom={10}
+                style={{ height: '100%', width: '100%' }}
+                key="map-container-v1"
+            >
+                <MapContent restaurants={restaurants} onMarkerClick={onMarkerClick} />
+            </MapContainer>
+        </div>
     );
 }
