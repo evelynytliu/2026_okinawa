@@ -12,47 +12,75 @@ const RestaurantMap = dynamic(() => import('@/components/RestaurantMap'), { ssr:
 const RECOMMENDED_RESTAURANTS = [
   {
     id: 'rec_steak88',
-    name: 'Steakhouse 88',
-    intro: '沖繩經典老牌牛排館，70年歷史的美味傳承。提供多樣化的牛排選擇與無限量沙拉吧。濃厚的美式復古氛圍，適合家庭聚餐的大份量滿足感。',
+    name: 'Steakhouse 88 (國際通)',
+    intro: '【適合多人】沖繩經典老牌牛排館，擁有寬敞座位區，非常適合大家族聚餐。提供多樣化的牛排選擇與無限量沙拉吧，美式復古氛圍讓大人小孩都放鬆。',
     dishes: '特選沙朗牛排、菲力牛排、自助沙拉吧',
     address: '那覇市牧志3-1-6 勉強堂ビル2F',
     mapUrl: 'https://maps.google.com/?q=Steakhouse+88+Kokusai+Dori',
     img_url: '/images/steak_dinner.png',
     lat: 26.2154,
-    lng: 127.6845
+    lng: 127.6845,
+    tag: '晚餐推薦'
+  },
+  {
+    id: 'rec_mikado',
+    name: 'Mikado (三笠松山店)',
+    intro: '【24小時營業】在地人最愛的家庭式食堂，離那霸住宿點近。菜色豐富均一價且份量大，有苦瓜炒蛋、強棒飯等，非常適合隨時肚子餓的長輩與小孩。',
+    dishes: '強棒飯 (Chanpon)、苦瓜炒蛋定食',
+    address: '那覇市松山1-3-18',
+    mapUrl: 'https://maps.google.com/?q=Mikado+Okinawa',
+    img_url: '/images/okinawa_soba.png',
+    lat: 26.2185,
+    lng: 127.6805,
+    tag: '宵夜/早餐'
+  },
+  {
+    id: 'rec_agu_shabu',
+    name: 'Agu Pork Shabu (溫野菜/其它)',
+    intro: '【多人包廂】來到沖繩一定要吃阿古豬！涮涮鍋清淡健康，適合長輩口味；吃到飽模式則能讓年輕人滿足。建議預訂有包廂的店家。',
+    dishes: '阿古豬涮涮鍋、島豆腐、海葡萄',
+    address: '那覇/美國村周邊 (建議預約)',
+    mapUrl: 'https://maps.google.com/?q=Okinawa+Shabu+Shabu',
+    img_url: '/images/agu_pork.png',
+    lat: 26.2120,
+    lng: 127.6780,
+    tag: '晚餐推薦'
   },
   {
     id: 'rec_kijimuna',
     name: 'Taco Rice Cafe Kijimuna',
-    intro: '位於美國村的超人氣塔可飯專賣店。滑嫩的歐姆蛋鋪在香氣四溢的塔可肉醬上，這就是傳說中的「歐姆蛋塔可飯」，大人小孩都愛的沖繩靈魂美食。',
+    intro: '【親子友善】美國村午餐首選。滑嫩歐姆蛋鋪在塔可飯上，口味溫和，小朋友也能開心享用。位於美國村中心，方便逛街前後用餐。',
     dishes: '歐姆蛋塔可飯 (Omutaco)、甘口兒童餐',
     address: '北谷町美浜9-1 Depot Island Building C 2F',
     mapUrl: 'https://maps.google.com/?q=Taco+Rice+Cafe+Kijimunaa',
     img_url: '/images/taco_rice.png',
     lat: 26.3170,
-    lng: 127.7570
+    lng: 127.7570,
+    tag: '午餐推薦'
   },
   {
-    id: 'rec_yunangi',
-    name: 'Yunangi (ゆうなんぎい)',
-    intro: '國際通巷弄內的在地名店，排隊也要吃到的正宗沖繩鄉土料理。氛圍溫馨，能品嚐到最道地的沖繩苦瓜炒蛋與入口即化的紅燒肉。',
-    dishes: '苦瓜炒蛋、沖繩紅燒肉 (Rafute)、墨魚汁湯',
-    address: '那覇市久茂地3-3-3',
-    mapUrl: 'https://maps.google.com/?q=Yunangi+Okinawa',
-    img_url: '/images/okinawa_soba.png',
-    lat: 26.2144,
-    lng: 127.6811
+    id: 'rec_yakiniku',
+    name: 'Yakiniku King (燒肉王)',
+    intro: '【吃到飽首選】日本連鎖高品質燒肉吃到飽，座位寬敞，有點餐平板(多語言)。種類多樣含熟食與甜點，絕對能滿足5~60歲的所有胃口。',
+    dishes: '牛五花、橫膈膜、石鍋拌飯',
+    address: '宜野灣/北谷/那霸皆有分店',
+    mapUrl: 'https://maps.google.com/?q=Yakiniku+King+Okinawa',
+    img_url: '/images/yakiniku.png',
+    lat: 26.2750,
+    lng: 127.7350,
+    tag: '晚餐推薦'
   },
   {
     id: 'rec_blueseal',
     name: 'Blue Seal Ice Cream',
-    intro: '源自美國、成長於沖繩的冰淇淋品牌。以色彩繽紛與豐富口味聞名，擁有超過30種口味，包括沖繩限定的紅芋、鹽金楚糕口味。',
+    intro: '【甜點時刻】沖繩必吃冰淇淋！推薦在美國村或國際通逛累了來一支。清爽的甘蔗口味或濃郁的紅芋口味，是老少咸宜的休息站。',
     dishes: '紅芋冰淇淋、鹽金楚糕冰淇淋',
-    address: '沖繩各地 (推薦港川外人住宅店/國際通店)',
+    address: '沖繩各地',
     mapUrl: 'https://maps.google.com/?q=Blue+Seal+Ice+Cream',
     img_url: '/images/blue_seal.png',
     lat: 26.2647,
-    lng: 127.7028
+    lng: 127.7028,
+    tag: '點心推薦'
   }
 ];
 
