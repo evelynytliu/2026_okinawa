@@ -36,8 +36,10 @@ export default function RestaurantMap({ restaurants, onMarkerClick }) {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
-        // User Location
-        map.locate().on("locationfound", function (e) {
+        // User Location Handler
+        const onLocationFound = function (e) {
+            if (!mapInstanceRef.current) return; // Map destroyed
+
             const userIcon = new L.Icon({
                 iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
                 shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -47,7 +49,10 @@ export default function RestaurantMap({ restaurants, onMarkerClick }) {
                 shadowSize: [41, 41]
             });
             L.marker(e.latlng, { icon: userIcon }).addTo(map).bindPopup("You are here");
-        });
+        };
+
+        map.on("locationfound", onLocationFound);
+        map.locate();
 
         // Initialize Layer Group for Markers
         const markersLayer = L.layerGroup().addTo(map);
@@ -56,6 +61,7 @@ export default function RestaurantMap({ restaurants, onMarkerClick }) {
 
         return () => {
             if (mapInstanceRef.current) {
+                mapInstanceRef.current.off("locationfound", onLocationFound);
                 mapInstanceRef.current.remove();
                 mapInstanceRef.current = null;
             }
