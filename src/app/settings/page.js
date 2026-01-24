@@ -336,7 +336,7 @@ export default function SettingsPage() {
                             type={showKey ? "text" : "password"}
                             value={apiKey}
                             onChange={(e) => setApiKey(e.target.value)}
-                            placeholder="請在此貼上您的 API Key"
+                            placeholder="請貼上完整金鑰 (AIza開頭...)"
                             className={styles.input}
                             style={{ flex: 1, padding: '0.8rem', borderRadius: '8px', border: '1px solid #ddd' }}
                         />
@@ -354,10 +354,12 @@ export default function SettingsPage() {
                     >
                         儲存金鑰
                     </button>
-                    <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.5rem' }}>
-                        * 金鑰將儲存於您的瀏覽器中，不會上傳至其他伺服器。
+                    <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.5rem', lineHeight: '1.4' }}>
+                        * 請務必點擊 Google AI Studio 右側的「複製圖示」<span style={{ border: '1px solid #ccc', borderRadius: '3px', padding: '0 4px', fontSize: '0.6rem' }}>❐</span> 取得完整金鑰。
+                        <br />
+                        * 顯示為 <strong>Free tier</strong> 即可免費使用，<u>無需設定 Billing (付費資料)</u>。
                         <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{ color: 'var(--color-teal)', marginLeft: '4px', textDecoration: 'underline' }}>
-                            取得 Key
+                            前往取得
                         </a>
                     </p>
                 </div>
