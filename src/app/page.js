@@ -284,15 +284,7 @@ export default function Dashboard() {
       </section>
 
       <div className={styles.bentoGrid}>
-        {/* Primary Action: Add Expense (Tall - spans 2 rows in CSS if supported, or just distinct style) */}
-        <Link href="/expenses/add" className={`${styles.bentoCard} ${styles.cardPrimary}`}>
-          <div className={styles.cardIcon}>
-            <PlusCircle size={40} color="white" />
-          </div>
-          <span className={styles.cardLabel}>記一筆</span>
-        </Link>
-
-        {/* Secondary Action: Itinerary (Dark) */}
+        {/* Secondary Action: Itinerary (Dark) - Promoted to first position */}
         <Link href="/itinerary" className={`${styles.bentoCard} ${styles.cardAccent}`}>
           <div className={styles.cardIcon}>
             <Calendar size={32} color="var(--color-ink)" />
@@ -373,7 +365,8 @@ export default function Dashboard() {
 
       {/* FAB */}
       <Link href="/expenses/add" className={styles.fab}>
-        <PlusCircle size={32} />
+        <PlusCircle size={28} />
+        <span>記一筆</span>
       </Link>
     </div>
   );
