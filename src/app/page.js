@@ -177,12 +177,14 @@ export default function Dashboard() {
       if (aiData?.error) throw new Error(aiData.error);
 
       let insertData = {
+        id: crypto.randomUUID(),
         name: newRestName,
         type: 'food',
         details: aiData?.details || '',
         address: aiData?.address || '',
         lat: aiData?.lat || null,
-        lng: aiData?.lng || null
+        lng: aiData?.lng || null,
+        img_url: aiData?.image_url || null
       };
       if (aiData?.found) {
         // Use AI details

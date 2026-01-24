@@ -12,6 +12,7 @@ export async function fetchPlaceDetails(placeName, apiKey) {
         "address": "請提供完整日文或英文地址 (若不確定請留空)",
         "lat": 26.2123 (數值, 緯度),
         "lng": 127.6792 (數值, 經度),
+        "image_url": "請盡量提供一張該地點的代表性圖片連結 (如 Wikimedia Commons 或 官方網站圖片)，必須是 .jpg 或 .png 結尾。若找不到請留空。",
         "details": "請用繁體中文介紹這個地點，包括特色美食或是什麼樣的地方 (約 50-80 字)。",
         "note": "一句話短評或推薦 (15字以內)",
         "type": "food", 
