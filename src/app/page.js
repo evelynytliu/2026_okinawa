@@ -444,18 +444,16 @@ export default function Dashboard() {
                 <div className={styles.restActions}>
                   <button className={styles.btnDetail}>查看</button>
 
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button onClick={(e) => handleEditRestaurant(e, rest)} style={{ background: 'none', border: 'none', color: '#666', padding: '4px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                       <Edit size={18} />
                     </button>
                     <button onClick={(e) => handleDeleteRestaurant(e, rest.id)} style={{ background: 'none', border: 'none', color: '#ff4d4f', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}>
                       <Trash2 size={18} />
                     </button>
-                    {!rest.isDb && (
-                      <button className={styles.btnWish} onClick={(e) => handleAddWish(e, rest)} title="加入許願池" style={{ padding: '4px' }}>
-                        <Heart size={18} color="var(--color-orange)" />
-                      </button>
-                    )}
+                    <button className={styles.btnWish} onClick={(e) => handleAddWish(e, rest)} title="加入許願池">
+                      <Heart size={18} fill="white" stroke="white" />
+                    </button>
                   </div>
                 </div>
               </div>
