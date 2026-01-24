@@ -45,7 +45,7 @@ function SortableLocationItem({ loc, isEditMode, openModal, handleRename, handle
         transition,
         opacity: isDragging ? 0.3 : 1,
         zIndex: isDragging ? 999 : 1,
-        touchAction: 'none',
+        // Remove touchAction: 'none' here to allow scrolling on the item body
         listStyle: 'none',
     };
 
@@ -65,7 +65,7 @@ function SortableLocationItem({ loc, isEditMode, openModal, handleRename, handle
                     className={styles.reorderControls}
                     {...attributes}
                     {...listeners}
-                    style={{ cursor: 'grab', display: 'flex', alignItems: 'center', padding: '0 8px 0 0' }}
+                    style={{ cursor: 'grab', display: 'flex', alignItems: 'center', padding: '0 8px 0 0', touchAction: 'none' }}
                 >
                     <GripVertical size={20} color="#aaa" />
                 </div>
