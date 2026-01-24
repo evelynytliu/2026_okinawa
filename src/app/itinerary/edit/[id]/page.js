@@ -209,18 +209,19 @@ export default function EditLocationPage() {
 
     // AI Auto-Fill State
     const [isAiLoading, setIsAiLoading] = useState(false);
+    const [errorInfo, setErrorInfo] = useState(null);
 
     const handleAutoFill = async () => {
-        if (!name) return alert('請先輸入景點名稱');
+        if (!name) return setErrorInfo({ title: '缺少資料', message: '請先輸入景點名稱' });
         const key = localStorage.getItem('gemini_api_key');
-        if (!key) return alert('請先至設定頁面輸入 Gemini API Key');
+        if (!key) return setErrorInfo({ title: '缺少金鑰', message: '請先至設定頁面輸入 Gemini API Key' });
 
         setIsAiLoading(true);
         try {
             const result = await fetchPlaceDetails(name, key);
 
             if (result && result.error) {
-                alert(`❌ AI 錯誤: ${result.error}`);
+                setErrorInfo({ title: 'AI 分析錯誤', message: result.error });
                 return;
             }
 
@@ -231,11 +232,11 @@ export default function EditLocationPage() {
                 if (result.type) setType(result.type);
                 alert('✨ AI 資料已自動填入！');
             } else {
-                alert('⚠️ 雖然成功連線，但 AI 回報找不到相關資訊，請嘗試更換名稱。');
+                setErrorInfo({ title: '找不到相關資訊', message: '雖然成功連線，但 AI 回報找不到詳細資訊。請嘗試更換名稱。' });
             }
         } catch (e) {
             console.error(e);
-            alert(`❌ 發生未知錯誤: ${e.message}`);
+            setErrorInfo({ title: '系統錯誤', message: e.message || String(e) });
         } finally {
             setIsAiLoading(false);
         }
@@ -894,6 +895,47 @@ export default function EditLocationPage() {
                     {saving ? '儲存中...' : (uploading ? '圖片處理中...' : '儲存變更')}
                 </button>
             </div>
+
+            {/* Error Logic Modal */}
+            {errorInfo && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.5)', zIndex: 9999,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+                }} onClick={() => setErrorInfo(null)}>
+                    <div style={{
+                        background: 'white', padding: '1.5rem', borderRadius: '12px',
+                        width: '100%', maxWidth: '400px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+                    }} onClick={e => e.stopPropagation()}>
+                        <h3 style={{ marginTop: 0, color: '#d32f2f', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem' }}>
+                            {errorInfo.title}
+                        </h3>
+                        <div style={{
+                            background: '#f5f5f5', padding: '10px', borderRadius: '8px',
+                            maxHeight: '200px', overflowY: 'auto', fontSize: '0.85rem',
+                            fontFamily: 'monospace', whiteSpace: 'pre-wrap', marginBottom: '1.5rem',
+                            border: '1px solid #ddd', color: '#333',
+                            wordBreak: 'break-all'
+                        }}>
+                            {errorInfo.message}
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                            <button onClick={() => {
+                                navigator.clipboard.writeText(errorInfo.message);
+                                alert('已複製錯誤訊息');
+                            }} style={{
+                                padding: '8px 16px', borderRadius: '8px', border: '1px solid #ddd',
+                                background: 'white', cursor: 'pointer', color: '#333'
+                            }}>一鍵複製</button>
+                            <button onClick={() => setErrorInfo(null)} style={{
+                                padding: '8px 16px', borderRadius: '8px', border: 'none',
+                                background: '#333', color: 'white', cursor: 'pointer'
+                            }}>關閉</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style jsx global>{`
                 .form-group input:focus, .form-group textarea:focus {
