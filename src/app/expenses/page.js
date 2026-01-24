@@ -2,7 +2,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Coffee, Car, Home, ShoppingBag, Ticket, MoreHorizontal, ChevronDown, ChevronUp, X, User, Edit2, Check, PieChart, Wallet, Calendar, Users } from 'lucide-react';
+import { Plus, PlusCircle, Coffee, Car, Home, ShoppingBag, Ticket, MoreHorizontal, ChevronDown, ChevronUp, X, User, Edit2, Check, PieChart, Wallet, Calendar, Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 import { useTrip } from '@/context/TripContext';
@@ -304,7 +304,7 @@ function ExpensesPageContent() {
             )}
 
             <Link href="/expenses/add" className={styles.fab}>
-                <Plus size={24} />
+                <PlusCircle size={32} />
             </Link>
         </div>
     );
