@@ -365,7 +365,7 @@ export default function Dashboard() {
 
       {/* FAB */}
       <Link href="/expenses/add" className={styles.fab}>
-        <PlusCircle size={28} />
+        <PlusCircle size={20} />
         <span>記一筆</span>
       </Link>
     </div>
