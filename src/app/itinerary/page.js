@@ -9,6 +9,7 @@ import styles from './page.module.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import WeatherBadge from '@/components/WeatherBadge';
 import { fetchOkinawaWeather } from '@/lib/weather';
+import { fetchPlaceDetails } from '@/lib/gemini';
 
 // DND Kit Imports
 import {
@@ -513,9 +514,34 @@ function ItineraryContent() {
         if (!isExisting) {
             const name = locIdOrName;
             if (!name) return;
+
+            // AI Auto-Fill
+            const geminiKey = localStorage.getItem('gemini_api_key');
+            let aiData = {};
+            if (geminiKey) {
+                try {
+                    // Small user feedback (non-blocking but noticeable if fast)
+                    const result = await fetchPlaceDetails(name, geminiKey);
+                    if (result && result.found) {
+                        aiData = {
+                            address: result.address,
+                            details: result.details,
+                            note: result.note,
+                            type: result.type || 'food'
+                        };
+                    }
+                } catch (e) {
+                    console.error("AI Auto-fill failed", e);
+                }
+            }
+
             const locRes = await supabase
                 .from('locations')
-                .insert({ id: crypto.randomUUID(), name: name })
+                .insert({
+                    id: crypto.randomUUID(),
+                    name: name,
+                    ...aiData
+                })
                 .select()
                 .single();
             if (locRes.error) {

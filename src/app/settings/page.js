@@ -20,6 +20,25 @@ export default function SettingsPage() {
     const [isMobile, setIsMobile] = useState(false);
     const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
+    // Gemini API State
+    const [apiKey, setApiKey] = useState('');
+    const [showKey, setShowKey] = useState(false);
+
+    useEffect(() => {
+        const key = localStorage.getItem('gemini_api_key');
+        if (key) setApiKey(key);
+    }, []);
+
+    const handleSaveKey = () => {
+        if (!apiKey.trim()) {
+            localStorage.removeItem('gemini_api_key');
+            alert('API Key 已清除');
+            return;
+        }
+        localStorage.setItem('gemini_api_key', apiKey.trim());
+        alert('API Key 已儲存！現在您可以嘗試新增餐廳了。');
+    };
+
     useEffect(() => {
         setIsStandalone(window.matchMedia('(display-mode: standalone)').matches);
         const userAgent = window.navigator.userAgent.toLowerCase();
@@ -301,6 +320,46 @@ export default function SettingsPage() {
                             {isSavingRate ? <Loader2 className={styles.spin} size={16} /> : '儲存'}
                         </button>
                     </div>
+                </div>
+            </div>
+
+            <div className="card">
+                <div className={styles.settingItem}>
+                    <div className={styles.settingInfo}>
+                        <h4>AI 智慧助理設定</h4>
+                        <p>輸入 Gemini API Key 以啟用餐廳自動搜尋功能</p>
+                    </div>
+                </div>
+                <div className={styles.inputGroup} style={{ marginTop: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                            type={showKey ? "text" : "password"}
+                            value={apiKey}
+                            onChange={(e) => setApiKey(e.target.value)}
+                            placeholder="請在此貼上您的 API Key"
+                            className={styles.input}
+                            style={{ flex: 1, padding: '0.8rem', borderRadius: '8px', border: '1px solid #ddd' }}
+                        />
+                        <button
+                            onClick={() => setShowKey(!showKey)}
+                            style={{ padding: '0 1rem', background: '#f5f5f5', border: '1px solid #ddd', borderRadius: '8px', cursor: 'pointer' }}
+                        >
+                            {showKey ? '隱藏' : '顯示'}
+                        </button>
+                    </div>
+                    <button
+                        onClick={handleSaveKey}
+                        className={styles.saveBtn}
+                        style={{ marginTop: '0.8rem', width: '100%' }}
+                    >
+                        儲存金鑰
+                    </button>
+                    <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.5rem' }}>
+                        * 金鑰將儲存於您的瀏覽器中，不會上傳至其他伺服器。
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{ color: 'var(--color-teal)', marginLeft: '4px', textDecoration: 'underline' }}>
+                            取得 Key
+                        </a>
+                    </p>
                 </div>
             </div>
 
