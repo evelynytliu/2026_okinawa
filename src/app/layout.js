@@ -17,7 +17,7 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="zh-TW">
-      <body>
+      <body suppressHydrationWarning={true}>
         {String(process.env.NEXT_PUBLIC_DEMO_MODE).toLowerCase() === 'true' && (
           <div style={{
             position: 'fixed',

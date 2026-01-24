@@ -20,51 +20,58 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    background: white;
-    padding: 6px 12px;
+    background: transparent;
+    padding: 6px 16px;
     border-radius: 20px;
     font-size: 0.85rem;
-    color: var(--text-main);
-    border: 1px solid #e2e8f0;
+    color: var(--color-ink);
+    border: 1px solid #CCC;
     white-space: nowrap;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .shortcutBtn:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
+    background: #F5F5F4;
+    border-color: var(--primary);
 }
 
 .activeShortcut {
-    background: #fffbeb;
-    color: #b45309;
-    border-color: #fcd34d;
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    font-weight: 600;
 }
 
+/* Outline Style Card */
 .totalCard {
-    background: var(--primary);
-    color: var(--color-white);
+    background: #FFFFFF;
+    color: var(--color-ink);
     padding: 1.5rem;
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-sm);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     margin-top: 1rem;
-    box-shadow: var(--shadow-md);
+    box-shadow: none;
+    border: 2px solid var(--color-ink);
 }
 
 .label {
-    font-size: 0.9rem;
-    opacity: 0.9;
+    font-size: 0.8rem;
+    color: var(--text-muted);
     margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
 }
 
 .amount {
     font-size: 2.5rem;
     font-weight: 700;
     font-family: var(--font-serif);
+    color: var(--color-ink);
 }
 
 .summarySection {
@@ -125,7 +132,8 @@
 }
 
 .list {
-    padding-bottom: 6rem;
+    padding-bottom: 8rem;
+    /* Increased padding to clear navbar and FAB */
 }
 
 .expenseItem {
@@ -133,15 +141,16 @@
     align-items: flex-start;
     background: var(--bg-card);
     padding: 1rem;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     margin-bottom: 0.75rem;
-    box-shadow: var(--shadow-sm);
+    box-shadow: none;
     cursor: pointer;
     transition: background 0.2s;
+    border-bottom: 1px solid #E5E5E5;
 }
 
 .expenseItem:active {
-    background: #f0f0f0;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .iconBox {
@@ -186,10 +195,13 @@
     align-items: center;
     gap: 4px;
     font-size: 0.75rem;
-    color: #64748b;
-    background: #f1f5f9;
-    padding: 2px 6px;
+    color: #555;
+    /* Darker grey text */
+    background: #F4F4F5;
+    /* Visible light grey background */
+    padding: 3px 8px;
     border-radius: 4px;
+    border: 1px solid #E4E4E7;
 }
 
 .payerTag {
@@ -204,9 +216,9 @@
 
 .noteText {
     font-size: 0.75rem;
-    color: #666;
+    color: #a1a1aa;
     margin-top: 6px;
-    background: #f0f0f0;
+    background: rgba(255, 255, 255, 0.05);
     padding: 3px 8px;
     border-radius: 4px;
     display: inline-block;
@@ -258,7 +270,7 @@
 }
 
 .modalContent {
-    background: #fff;
+    background: #1E1E24;
     width: 100%;
     max-width: 350px;
     border-radius: 16px;
@@ -394,8 +406,8 @@
 }
 
 .payerTagRight {
-    background: #f1f5f9;
-    color: #475569;
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
     font-size: 0.75rem;
     padding: 2px 8px;
     border-radius: 4px;

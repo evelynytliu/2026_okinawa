@@ -46,7 +46,7 @@
 
 /* Countdown Section - Integrated integration */
 .heroCard {
-  background: white;
+  background: var(--bg-card);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
   display: flex;
@@ -55,6 +55,9 @@
   box-shadow: var(--shadow-sm);
   text-decoration: none;
   border-left: 6px solid var(--color-coral);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 6px solid var(--color-coral);
+  /* Re-apply left border specific styling */
   transition: all 0.3s ease;
 }
 
@@ -184,12 +187,14 @@
   color: var(--color-ink);
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.03);
+  border: 1px solid #E5E5E5;
+  /* Visible border */
 }
 
 .bentoCard:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+  border-color: var(--color-ink);
 }
 
 .bentoCard:active {
@@ -210,12 +215,14 @@
 }
 
 .cardAccent {
-  background: var(--color-ink);
-  color: white;
+  background: #F8F8F8;
+  /* Light light grey for accent */
+  color: var(--color-ink);
+  border: 1px solid #E5E5E5;
 }
 
 .cardAccent .cardLabel {
-  color: white;
+  color: var(--color-ink);
 }
 
 .cardLabel {
@@ -227,8 +234,15 @@
 }
 
 .cardIcon {
-  opacity: 0.9;
+  opacity: 1;
+  /* Full opacity */
   transition: transform 0.3s ease;
+  color: var(--color-ink);
+  /* Default to black/ink */
+}
+
+.cardPrimary .cardIcon {
+  color: white;
 }
 
 .bentoCard:hover .cardIcon {

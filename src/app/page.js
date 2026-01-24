@@ -106,7 +106,7 @@ export default function Dashboard() {
         {/* Secondary Action: Itinerary (Dark) */}
         <Link href="/itinerary" className={`${styles.bentoCard} ${styles.cardAccent}`}>
           <div className={styles.cardIcon}>
-            <Calendar size={32} color="white" />
+            <Calendar size={32} color="var(--color-ink)" />
           </div>
           <span className={styles.cardLabel}>查看行程</span>
         </Link>
@@ -117,17 +117,17 @@ export default function Dashboard() {
         </Link>
 
         <Link href="/analysis" className={styles.bentoCard}>
-          <PieChart size={28} className={styles.cardIcon} color="#2E8B99" />
+          <PieChart size={28} className={styles.cardIcon} color="var(--color-teal)" />
           <span className={styles.cardLabel}>支出統計</span>
         </Link>
 
         <Link href="/settlement" className={styles.bentoCard}>
-          <Wallet size={28} className={styles.cardIcon} color="#f59e0b" />
+          <Wallet size={28} className={styles.cardIcon} color="var(--color-gold)" />
           <span className={styles.cardLabel}>待結清款</span>
         </Link>
 
         <Link href="/accommodation" className={styles.bentoCard}>
-          <Hotel size={28} className={styles.cardIcon} color="#E6B422" />
+          <Hotel size={28} className={styles.cardIcon} color="var(--color-gold)" />
           <span className={styles.cardLabel}>房間分配</span>
         </Link>
 

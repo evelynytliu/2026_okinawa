@@ -55,9 +55,9 @@ function SortableLocationItem({ loc, isEditMode, openModal, handleRename, handle
             style={style}
             className={styles.locationItem}
             onClick={() => openModal(loc)}
-            initial={{ opacity: 0, x: -10 }}
+            initial={{ opacity: 0, x: -5 }}
             animate={{ opacity: 1, x: 0 }}
-            whileHover={{ scale: 1.01, x: 5 }}
+            whileTap={{ scale: 0.98 }}
             transition={{ duration: 0.2 }}
         >
             {isEditMode && (
@@ -71,48 +71,56 @@ function SortableLocationItem({ loc, isEditMode, openModal, handleRename, handle
                 </div>
             )}
 
-            <div className={styles.locMain}>
-                <div className={styles.locTitleRow}>
-                    <MapPin size={18} className={styles.icon} />
-                    <span className={styles.locName}>{loc.name}</span>
-                    {(loc.img_url || loc.details) && <Info size={14} className={styles.infoIcon} />}
+            <div className={styles.itemContent}>
+                {loc.img_url && (
+                    <div className={styles.thumbnailWrapper}>
+                        <img src={loc.img_url} alt={loc.name} className={styles.listThumbnail} />
+                    </div>
+                )}
 
-                    {isEditMode && (
-                        <div className={styles.editActions}>
-                            <button
-                                className={styles.editItemBtn}
-                                onClick={(e) => handleRename(e, loc)}
-                                title="修改名稱"
-                            >
-                                <Edit2 size={12} />
-                            </button>
-                            <button
-                                className={styles.deleteItemBtn}
-                                onClick={(e) => handleDelete(e, loc.item_id)}
-                                title="刪除"
-                            >
-                                <Trash2 size={12} />
-                            </button>
-                        </div>
+                <div className={styles.locMain}>
+                    <div className={styles.locTitleRow}>
+                        {!loc.img_url && <MapPin size={18} className={styles.icon} />}
+                        <span className={styles.locName}>{loc.name}</span>
+                        {/* Remove Info Icon as image implies detail */}
+
+                        {isEditMode && (
+                            <div className={styles.editActions}>
+                                <button
+                                    className={styles.editItemBtn}
+                                    onClick={(e) => handleRename(e, loc)}
+                                    title="修改名稱"
+                                >
+                                    <Edit2 size={12} />
+                                </button>
+                                <button
+                                    className={styles.deleteItemBtn}
+                                    onClick={(e) => handleDelete(e, loc.item_id)}
+                                    title="刪除"
+                                >
+                                    <Trash2 size={12} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    {loc.note && (
+                        <span
+                            className={styles.locNote}
+                            onClick={async (e) => {
+                                if (isEditMode) {
+                                    e.stopPropagation();
+                                    const newNote = prompt('修改備註:', loc.note);
+                                    if (newNote !== null) {
+                                        await supabase.from('itinerary_items').update({ note: newNote }).eq('id', loc.item_id);
+                                    }
+                                }
+                            }}
+                            style={isEditMode ? { cursor: 'pointer', border: '1px dashed #ccc' } : {}}
+                        >
+                            {loc.note} {isEditMode && <Edit2 size={10} style={{ marginLeft: 4, display: 'inline' }} />}
+                        </span>
                     )}
                 </div>
-                {loc.note && (
-                    <span
-                        className={styles.locNote}
-                        onClick={async (e) => {
-                            if (isEditMode) {
-                                e.stopPropagation();
-                                const newNote = prompt('修改備註:', loc.note);
-                                if (newNote !== null) {
-                                    await supabase.from('itinerary_items').update({ note: newNote }).eq('id', loc.item_id);
-                                }
-                            }
-                        }}
-                        style={isEditMode ? { cursor: 'pointer', border: '1px dashed #ccc' } : {}}
-                    >
-                        {loc.note} {isEditMode && <Edit2 size={10} style={{ marginLeft: 4, display: 'inline' }} />}
-                    </span>
-                )}
             </div>
         </motion.li>
     );
@@ -130,6 +138,19 @@ const getWeekday = (dateStr) => {
     }
 };
 
+
+const linkifyText = (text) => {
+    if (!text) return null;
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+    return parts.map((part, i) => {
+        if (part.match(urlRegex)) {
+            return <a key={i} href={part} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>{part}</a>;
+        }
+        return part;
+    });
+};
+
 function ItineraryContent() {
     const { isEditMode } = useTrip();
     const searchParams = useSearchParams();
@@ -137,6 +158,82 @@ function ItineraryContent() {
     const [loading, setLoading] = useState(true);
     const [selectedLoc, setSelectedLoc] = useState(null);
     const [weatherData, setWeatherData] = useState({});
+    const [activeDayIndex, setActiveDayIndex] = useState(0);
+    const timelineRef = React.useRef(null);
+    const dayRefs = React.useRef([]);
+
+    // Custom Draggable Scroll Implementation
+    useEffect(() => {
+        const slider = timelineRef.current;
+        if (!slider) return;
+
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+        let isDragging = false;
+
+        const onMouseDown = (e) => {
+            isDown = true;
+            isDragging = false;
+            startX = e.pageX - slider.offsetLeft;
+            scrollLeft = slider.scrollLeft;
+            slider.style.cursor = 'grabbing';
+        };
+
+        const onMouseLeave = () => {
+            isDown = false;
+            slider.style.cursor = 'grab';
+        };
+
+        const onMouseUp = () => {
+            isDown = false;
+            slider.style.cursor = 'grab';
+            // Do NOT reset isDragging here. It must persist until the click event fires (or next mousedown).
+        };
+
+        const onMouseMove = (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - slider.offsetLeft;
+            const walk = (x - startX); // 1:1 movement feels more natural for direct manipulation
+
+            // Only consider it a drag if moved more than 6 pixels
+            if (Math.abs(walk) > 6) {
+                isDragging = true;
+                slider.scrollLeft = scrollLeft - walk * 1.5; // Slight multiplication for comfortable flick
+            }
+        };
+
+        // Capture click to prevent it if we were dragging
+        const onClickCapture = (e) => {
+            if (isDragging) {
+                e.preventDefault();
+                e.stopPropagation();
+                // Optional: reset isDragging here if we want, but resetting on mousedown is safer for edge cases
+            }
+        };
+
+        slider.addEventListener('mousedown', onMouseDown);
+        slider.addEventListener('mouseleave', onMouseLeave);
+        slider.addEventListener('mouseup', onMouseUp);
+        slider.addEventListener('mousemove', onMouseMove);
+        slider.addEventListener('click', onClickCapture, true); // Capture phase
+
+        slider.style.cursor = 'grab';
+
+        return () => {
+            slider.removeEventListener('mousedown', onMouseDown);
+            slider.removeEventListener('mouseleave', onMouseLeave);
+            slider.removeEventListener('mouseup', onMouseUp);
+            slider.removeEventListener('mousemove', onMouseMove);
+            slider.removeEventListener('click', onClickCapture, true);
+        };
+    }, [loading]); // Re-attach when loading finishes and ref is stable
+
+    // Reset refs when schedule changes
+    useEffect(() => {
+        dayRefs.current = dayRefs.current.slice(0, schedule.length);
+    }, [schedule]);
 
     // Add Modal State
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -216,6 +313,46 @@ function ItineraryContent() {
             }
         }
     }, [schedule, searchParams]);
+
+    // Updated scroll tracker using IntersectionObserver for accuracy
+    useEffect(() => {
+        if (loading || schedule.length === 0) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const visibleEntries = entries.filter(e => e.isIntersecting);
+                if (visibleEntries.length > 0) {
+                    // Find the entry that's most visible
+                    const mostVisible = visibleEntries.reduce((prev, current) => {
+                        return (prev.intersectionRatio > current.intersectionRatio) ? prev : current;
+                    });
+                    const index = parseInt(mostVisible.target.getAttribute('data-index'));
+                    setActiveDayIndex(index);
+                }
+            },
+            {
+                root: timelineRef.current,
+                threshold: 0.6, // Must be 60% visible to count
+            }
+        );
+
+        dayRefs.current.forEach(ref => {
+            if (ref) observer.observe(ref);
+        });
+
+        return () => observer.disconnect();
+    }, [loading, schedule]);
+
+    const scrollToDay = (index) => {
+        const target = dayRefs.current[index];
+        if (target) {
+            target.scrollIntoView({
+                behavior: 'smooth',
+                inline: 'center',
+                block: 'nearest'
+            });
+        }
+    };
 
     const fetchSchedule = async () => {
         if (!supabase) {
@@ -410,33 +547,78 @@ function ItineraryContent() {
     if (loading) return <div className="container" style={{ textAlign: 'center', marginTop: '4rem' }}><Loader2 className="spin" size={32} color="var(--primary)" /> <p style={{ marginTop: '1rem', color: '#888' }}>精緻行程整理中...</p></div>;
 
     return (
-        <div className="container">
-            <header className={styles.header}>
-                <motion.h2
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
+        <div className={styles.pageWrapper}>
+            <div className="container">
+                <header className={styles.header}>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center' }}>
+                        <motion.p
+                            className="text-muted text-sm"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.4, duration: 0.6 }}
+                        >
+                            2026.02.04 - 02.10
+                        </motion.p>
+                    </div>
+                </header>
+            </div>
+
+            {/* Horizontal Day Navigation */}
+            <motion.div
+                className={styles.dayNav}
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.8 }}
+            >
+                <div className={styles.navLabel}>Day</div>
+                <motion.div
+                    className={styles.navContainer}
+                    initial="hidden"
+                    animate="visible"
+                    variants={{
+                        hidden: { opacity: 0 },
+                        visible: {
+                            opacity: 1,
+                            transition: { staggerChildren: 0.03 }
+                        }
+                    }}
                 >
-                    沖繩旅程行程
-                </motion.h2>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center' }}>
-                    <motion.p
-                        className="text-muted text-sm"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.4, duration: 0.6 }}
-                    >
-                        2026.02.04 - 02.10
-                    </motion.p>
-                </div>
-            </header>
+                    {schedule.map((day, idx) => (
+                        <motion.div
+                            key={day.id}
+                            variants={{
+                                hidden: { opacity: 0, scale: 0.8, y: 10 },
+                                visible: { opacity: 1, scale: 1, y: 0 }
+                            }}
+                            className={`${styles.navItem} ${activeDayIndex === idx ? styles.navItemActive : ''}`}
+                            onClick={() => scrollToDay(idx)}
+                            whileTap={{ scale: 0.9 }}
+                        >
+                            <span className={styles.navNumber} style={{ position: 'relative', zIndex: 10 }}>
+                                {day.day_number}
+                            </span>
+                            {activeDayIndex === idx && (
+                                <motion.div
+                                    layoutId="navIndicator"
+                                    className={styles.navIndicator}
+                                    initial={false}
+                                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                />
+                            )}
+                        </motion.div>
+                    ))}
+                </motion.div>
+            </motion.div>
 
             <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
             >
-                <div className={styles.timeline}>
+                <div
+                    className={styles.timeline}
+                    ref={timelineRef}
+                >
                     {!supabase && (
                         <div className="card" style={{ border: '1px solid #fee2e2', background: '#fff' }}>
                             <p style={{ fontWeight: 'bold', color: '#ef4444' }}>⚠️ 資料庫連結失敗</p>
@@ -447,17 +629,23 @@ function ItineraryContent() {
                     {schedule.map((dayItem, index) => (
                         <motion.div
                             key={dayItem.id}
+                            ref={el => dayRefs.current[index] = el}
+                            data-index={index}
                             className={styles.dayBlock}
-                            initial={{ opacity: 0, y: 30 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true, margin: "-50px" }}
-                            transition={{ duration: 0.6, delay: index * 0.1 }}
+                            initial={{ opacity: 0 }}
+                            whileInView={{ opacity: 1 }}
+                            viewport={{ once: true, margin: "0px" }}
+                            transition={{ duration: 0.4 }}
                         >
                             <div className={styles.dateColumn}>
                                 <div className={styles.dateCircle}>
                                     <span className={styles.dateLabel}>{dayItem.date_display?.slice(8)}</span>
                                     <span className={styles.weekdayLabel}>{getWeekday(dayItem.date_display).slice(2)}</span>
                                 </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1, marginLeft: '1rem', justifyContent: 'center' }}>
+                                    <h3 style={{ margin: 0, fontSize: '1rem' }}>{dayItem.title}</h3>
+                                </div>
+
                                 <span className={styles.dayNumberLabel}>Day {dayItem.day_number}</span>
 
                                 <div className={styles.weatherWrapper}>
@@ -481,9 +669,8 @@ function ItineraryContent() {
                             </div>
 
                             <div className={styles.contentColumn}>
-                                <div className={styles.cardHeader}>
-                                    <h3>{dayItem.title}</h3>
-                                    {isEditMode && (
+                                {isEditMode && (
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
                                         <button
                                             className={styles.editBtn}
                                             onClick={async () => {
@@ -495,8 +682,8 @@ function ItineraryContent() {
                                         >
                                             <Edit2 size={14} />
                                         </button>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
 
                                 <SortableContext
                                     items={dayItem.locations.map(l => l.item_id)}
@@ -599,8 +786,8 @@ function ItineraryContent() {
                                     )}
                                 </div>
 
-                                {selectedLoc.note && <div className={styles.modalNote}><strong>重點：</strong> {selectedLoc.note}</div>}
-                                {selectedLoc.details && <div className={styles.modalDesc}><p>{selectedLoc.details}</p></div>}
+                                {selectedLoc.note && <div className={styles.modalNote}><strong>重點：</strong> {linkifyText(selectedLoc.note)}</div>}
+                                {selectedLoc.details && <div className={styles.modalDesc}><p>{linkifyText(selectedLoc.details)}</p></div>}
                                 {selectedLoc.address && <div className={styles.modalAddress}><MapPin size={16} /> <span>{selectedLoc.address}</span></div>}
 
                                 <div className={styles.modalActions}>

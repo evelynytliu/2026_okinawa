@@ -83,41 +83,43 @@
 }
 
 .btnNum {
-    background-color: #f1f5f9;
-    color: #334155;
+    background-color: #FFFFFF;
+    color: #111;
+    border: 1px solid #E5E5E5;
 }
 
 .btnNum:active {
-    background-color: #e2e8f0;
+    background-color: #F4F4F5;
 }
 
 .btnOp {
-    background-color: #e0f2fe;
-    color: #0284c7;
+    background-color: #111;
+    color: #FFF;
     font-weight: 600;
 }
 
 .btnOp:active {
-    background-color: #bae6fd;
+    background-color: #333;
 }
 
 .btnAction {
-    background-color: #fee2e2;
+    background-color: #FFF;
     color: #ef4444;
+    border: 1px solid #ef4444;
 }
 
 .btnAction:active {
-    background-color: #fecaca;
+    background-color: #fef2f2;
 }
 
 .btnSubmit {
     grid-column: span 2;
-    background-color: #10b981;
+    background-color: #111;
     color: white;
 }
 
 .btnSubmit:active {
-    background-color: #059669;
+    background-color: #000;
 }
 
 .btnClose {
