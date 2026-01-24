@@ -25,8 +25,8 @@ export async function fetchPlaceDetails(placeName, apiKey) {
     }
 
     try {
-        // Using gemini-1.5-flash (Standard free tier model)
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${cleanKey}`, {
+        // Fallback to gemini-pro on stable v1 endpoint
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${cleanKey}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
