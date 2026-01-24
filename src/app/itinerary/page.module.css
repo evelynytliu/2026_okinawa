@@ -521,7 +521,7 @@
 .scrollImage {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
     flex-shrink: 0;
     scroll-snap-align: center;
 }
