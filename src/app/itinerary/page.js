@@ -170,14 +170,15 @@ function ItineraryContent() {
             const activeItem = container.children[activeDayIndex];
 
             if (activeItem) {
-                const scrollLeft = activeItem.offsetLeft - (container.clientWidth / 2) + (activeItem.clientWidth / 2);
-                container.scrollTo({
-                    left: scrollLeft,
-                    behavior: 'smooth'
+                // Use scrollIntoView with inline: 'center' for robust horizontal centering
+                activeItem.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'center'
                 });
             }
         }
-    }, [activeDayIndex]);
+    }, [activeDayIndex, schedule]);
 
     // Custom Draggable Scroll Implementation
     useEffect(() => {
