@@ -1,9 +1,10 @@
 "use client";
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MapPin, Edit2, Copy, Map, X, Info, Trash2, Plus, GripVertical, Loader2, FileText, ExternalLink } from 'lucide-react';
+import { MapPin, Edit2, Copy, Map, X, Info, Trash2, Plus, GripVertical, Loader2, FileText, ExternalLink, CloudRain } from 'lucide-react';
 import { useTrip } from '@/context/TripContext';
 import { supabase } from '@/lib/supabase';
+import { ITINERARY } from '@/lib/data';
 import styles from './page.module.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import WeatherBadge from '@/components/WeatherBadge';
@@ -218,6 +219,17 @@ function ItineraryContent() {
 
     const fetchSchedule = async () => {
         if (!supabase) {
+            setSchedule(ITINERARY.map(d => ({
+                id: d.day,
+                day_number: d.day,
+                date_display: d.date,
+                title: d.title,
+                locations: d.locations.map((loc, i) => ({
+                    ...loc,
+                    item_id: `static-${d.day}-${i}`,
+                    sort_order: i + 1
+                }))
+            })));
             setLoading(false);
             return;
         }
@@ -449,13 +461,22 @@ function ItineraryContent() {
                                 <span className={styles.dayNumberLabel}>Day {dayItem.day_number}</span>
 
                                 <div className={styles.weatherWrapper}>
-                                    {weatherData[dayItem.date_display] && (
-                                        <WeatherBadge
-                                            code={weatherData[dayItem.date_display].code}
-                                            maxTemp={weatherData[dayItem.date_display].max}
-                                            minTemp={weatherData[dayItem.date_display].min}
-                                        />
-                                    )}
+                                    {(() => {
+                                        const dateKey = dayItem.date_display?.replace(/\//g, '-');
+                                        const weather = weatherData[dateKey];
+                                        return weather ? (
+                                            <WeatherBadge
+                                                code={weather.code}
+                                                maxTemp={weather.max}
+                                                minTemp={weather.min}
+                                            />
+                                        ) : (
+                                            <div className={styles.weatherPlaceholder} title="氣象預報僅提供未來 16 天內的資訊">
+                                                <CloudRain size={12} />
+                                                <span>待更新</span>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
 

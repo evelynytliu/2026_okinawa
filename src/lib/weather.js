@@ -3,7 +3,7 @@ export const fetchOkinawaWeather = async () => {
         // Okinawa Naha Coordinates
         const lat = 26.2124;
         const lon = 127.6809;
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo`;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo&forecast_days=16`;
 
         const response = await fetch(url);
         const data = await response.json();
