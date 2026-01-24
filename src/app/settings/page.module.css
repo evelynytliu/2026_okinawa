@@ -75,7 +75,7 @@
 .toggleBtn.active {
     background: var(--primary);
     border-color: var(--primary);
-    color: var(--color-white);
+    color: white;
 }
 
 .familyList {
