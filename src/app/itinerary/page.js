@@ -550,16 +550,6 @@ function ItineraryContent() {
         <div className={styles.pageWrapper}>
             <div className="container">
                 <header className={styles.header}>
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center' }}>
-                        <motion.p
-                            className="text-muted text-sm"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.4, duration: 0.6 }}
-                        >
-                            2026.02.04 - 02.10
-                        </motion.p>
-                    </div>
                 </header>
             </div>
 
@@ -639,7 +629,9 @@ function ItineraryContent() {
                         >
                             <div className={styles.dateColumn}>
                                 <div className={styles.dateCircle}>
-                                    <span className={styles.dateLabel}>{dayItem.date_display?.slice(8)}</span>
+                                    <span className={styles.dateLabel}>
+                                        {dayItem.date_display?.slice(5, 10).replace('-', '.')}
+                                    </span>
                                     <span className={styles.weekdayLabel}>{getWeekday(dayItem.date_display).slice(2)}</span>
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flex: 1, justifyContent: 'center' }}>
