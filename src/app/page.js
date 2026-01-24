@@ -2,7 +2,7 @@
 import dynamic from 'next/dynamic';
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { Plane, Calendar, CreditCard, PlusCircle, PieChart, Hotel, Wallet, Sparkles, ClipboardList, MapPin, X, Utensils, Heart } from 'lucide-react';
+import { Plane, Calendar, CreditCard, Plus, PieChart, Hotel, Wallet, Sparkles, ClipboardList, MapPin, X, Utensils, Heart } from 'lucide-react';
 import { TRIP_DETAILS, LOCATION_DETAILS } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
 import styles from './page.module.css';
@@ -364,9 +364,21 @@ export default function Dashboard() {
       )}
 
       {/* FAB */}
-      <Link href="/expenses/add" className={styles.fab}>
-        <PlusCircle size={20} />
-        <span>記帳</span>
+      <Link href="/expenses/add" className={styles.fab} style={{
+        bottom: '130px',
+        zIndex: 2147483647,
+        width: '68px',
+        height: '68px',
+        borderRadius: '50%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 0,
+        gap: '0px'
+      }}>
+        <Plus size={32} strokeWidth={2.5} />
+        <span style={{ fontSize: '11px', lineHeight: 1 }}>記帳</span>
       </Link>
     </div>
   );
