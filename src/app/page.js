@@ -406,17 +406,30 @@ export default function Dashboard() {
             <h2 className={styles.sectionTitle}>Delicious Finds</h2>
             <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 600, letterSpacing: '0.05em' }}>沖繩必吃</span>
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            style={{
-              background: 'var(--color-orange, #f97316)', color: 'white', border: 'none',
-              borderRadius: '20px', padding: '6px 12px', fontSize: '0.85rem',
-              fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
-              boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-            }}
-          >
-            <Plus size={16} /> 新增
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Link
+              href="/nearby"
+              style={{
+                background: 'var(--color-sea-blue, #006994)', color: 'white', border: 'none',
+                borderRadius: '20px', padding: '6px 12px', fontSize: '0.85rem',
+                fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.1)', textDecoration: 'none'
+              }}
+            >
+              <MapPin size={16} /> 附近
+            </Link>
+            <button
+              onClick={() => setShowAddModal(true)}
+              style={{
+                background: 'var(--color-orange, #f97316)', color: 'white', border: 'none',
+                borderRadius: '20px', padding: '6px 12px', fontSize: '0.85rem',
+                fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+              }}
+            >
+              <Plus size={16} /> 新增
+            </button>
+          </div>
         </div>
 
         {/* Map Integration */}
