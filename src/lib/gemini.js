@@ -18,14 +18,16 @@ export async function fetchPlaceDetails(placeName, apiKey) {
     4. Type 預設為 food。如果是景點用 check_in，購物用 shopping，住宿用 stay。
     `;
 
-    // Basic validation
-    if (!apiKey.startsWith('AIza')) {
+    // Trim key to avoid whitespace issues
+    const cleanKey = apiKey.trim();
+    if (!cleanKey.startsWith('AIza')) {
         console.error("Invalid API Key format (should start with AIza)");
         return null;
     }
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+        // Using gemini-1.5-flash (Standard free tier model)
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${cleanKey}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -40,6 +42,10 @@ export async function fetchPlaceDetails(placeName, apiKey) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error("Gemini API Error:", response.status, errorText);
+
+            if (response.status === 404) {
+                throw new Error("模型未找到 (404)。可能是新建立的金鑰尚未生效 (請等待幾分鐘)，或該金鑰專案未啟用 Generative Language API。");
+            }
             throw new Error(`API Error: ${response.status} - ${errorText}`);
         }
 
