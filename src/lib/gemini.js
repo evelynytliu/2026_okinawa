@@ -2,17 +2,20 @@ export async function fetchPlaceDetails(placeName, apiKey) {
     if (!apiKey) return null;
 
     const prompt = `
-    你是沖繩旅遊助手。請查詢或推測地點「${placeName}」的資訊。
-    請回傳一個純 JSON 物件 (不要 Markdown code block)，格式如下：
+    你是沖繩旅遊助手。請查詢地點「${placeName}」的資訊。
+    
+    請遵守以下規則：
+    1. 即使名稱包含外語 (如 Pork Tamago) 或只有部分名稱，也請盡量推測最可能的沖繩知名地點 (例如：豬肉蛋飯糰)。
+    2. 如果找不到該「特定分店」，請提供該「品牌」或該「地區」的一般性資訊即可，務必將 "found" 設為 true。
+    3. 回傳純 JSON 物件：
     {
         "address": "請提供完整日文或英文地址 (若不確定請留空)",
-        "details": "請用繁體中文介紹這個地點，包括特色美食或亮點 (約 50-80 字)。若是不知名地點，請根據名稱推測其類型並撰寫一般性介紹。",
+        "details": "請用繁體中文介紹這個地點，包括特色美食或是什麼樣的地方 (約 50-80 字)。",
         "note": "一句話短評或推薦 (15字以內)",
         "type": "food", 
         "found": true
     }
-    如果這明顯不是餐廳，type 可以是 check_in (景點), shopping (購物), stay (住宿)。預設為 food。
-    請確保回傳的是合法的 JSON。
+    4. Type 預設為 food。如果是景點用 check_in，購物用 shopping，住宿用 stay。
     `;
 
     try {
