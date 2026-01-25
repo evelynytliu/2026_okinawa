@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic';
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plane, Calendar, CreditCard, Plus, PieChart, Hotel, Wallet, Sparkles, ClipboardList, MapPin, X, Utensils, Heart, Trash2, Edit, Loader2, Search } from 'lucide-react';
+import { Plane, Calendar, CreditCard, Plus, PieChart, Hotel, Wallet, Sparkles, ClipboardList, MapPin, X, Utensils, Heart, Trash2, Edit, Loader2, Search, Copy, Map, Edit2, ExternalLink } from 'lucide-react';
 import { TRIP_DETAILS, LOCATION_DETAILS } from '@/lib/data';
 import { fetchPlaceDetails } from '@/lib/gemini';
 import { supabase } from '@/lib/supabase';
@@ -357,6 +357,32 @@ export default function Dashboard() {
     }
   };
 
+  // Helper: Copy address to clipboard
+  const handleCopyAddress = async (e, address) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(address);
+      alert('地址已複製！');
+    } catch {
+      alert('複製失敗');
+    }
+  };
+
+  // Helper: Open in Google Maps
+  const handleOpenMap = (e, rest) => {
+    e.stopPropagation();
+    // Prefer lat/lng if available, otherwise use address
+    let url;
+    if (rest.lat && rest.lng) {
+      url = `https://www.google.com/maps/search/?api=1&query=${rest.lat},${rest.lng}`;
+    } else if (rest.address) {
+      url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rest.address)}`;
+    } else {
+      url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rest.name)}`;
+    }
+    window.open(url, '_blank');
+  };
+
   return (
     <div className={styles.dashboard}>
       <header className={styles.header}>
@@ -556,37 +582,95 @@ export default function Dashboard() {
       {selectedRest && (
         <div className={styles.modalOverlay} onClick={() => setSelectedRest(null)}>
           <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-            <button className={styles.closeBtn} onClick={() => setSelectedRest(null)}>
-              <X size={20} color="#333" />
-            </button>
-            <img src={selectedRest.img_url} className={styles.modalImage} alt={selectedRest.name} />
-            <div className={styles.modalBody}>
-              <h3 className={styles.modalTitle}>{selectedRest.name}</h3>
-
-              <div className={styles.modalSection}>
-                <span className={styles.sectionLabel}>簡介</span>
-                <p className={styles.modalText}>{selectedRest.intro}</p>
-              </div>
-
-              <div className={styles.modalSection}>
-                <span className={styles.sectionLabel}>推薦餐點</span>
-                <p className={styles.modalText} style={{ color: 'var(--color-coral)', fontWeight: 'bold' }}>
-                  <Utensils size={14} style={{ display: 'inline', marginRight: 5 }} />
-                  {selectedRest.dishes}
-                </p>
-              </div>
-
-              <div className={styles.modalSection}>
-                <span className={styles.sectionLabel}>地址</span>
-                <p className={styles.modalText} style={{ fontSize: '0.9rem', color: '#666' }}>
-                  {selectedRest.address}
-                </p>
-              </div>
+            {/* Top Action Buttons */}
+            <div className={styles.topActions}>
+              {selectedRest.isCustom && (
+                <button
+                  onClick={() => router.push(`/itinerary/edit/${selectedRest.id}`)}
+                  className={styles.iconBtn}
+                  title="編輯"
+                >
+                  <Edit2 size={20} />
+                </button>
+              )}
+              <button className={styles.iconBtn} onClick={() => setSelectedRest(null)} title="關閉">
+                <X size={24} />
+              </button>
             </div>
-            <div className={styles.modalFooter}>
-              <a href={selectedRest.mapUrl} target="_blank" rel="noreferrer" className={styles.btnMap}>
-                <MapPin size={16} /> 導航
-              </a>
+
+            {/* Image */}
+            {selectedRest.img_url && (
+              <img src={selectedRest.img_url} className={styles.modalImage} alt={selectedRest.name} />
+            )}
+
+            <div className={styles.modalBody}>
+              {/* Title */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <h3 className={styles.modalTitle}>{selectedRest.name}</h3>
+                <span style={{
+                  background: 'var(--color-coral-light, #ffe4e1)',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  color: 'var(--color-coral)',
+                  fontWeight: 'bold',
+                  fontSize: '0.75rem'
+                }}>
+                  食
+                </span>
+              </div>
+
+              {/* Intro */}
+              {selectedRest.intro && (
+                <div className={styles.modalSection}>
+                  <span className={styles.sectionLabel}>簡介</span>
+                  <p className={styles.modalText}>{selectedRest.intro}</p>
+                </div>
+              )}
+
+              {/* Dishes */}
+              {selectedRest.dishes && (
+                <div className={styles.modalSection}>
+                  <span className={styles.sectionLabel}>推薦餐點</span>
+                  <p className={styles.modalText} style={{ color: 'var(--color-coral)', fontWeight: 'bold' }}>
+                    <Utensils size={14} style={{ display: 'inline', marginRight: 5 }} />
+                    {selectedRest.dishes}
+                  </p>
+                </div>
+              )}
+
+              {/* Address */}
+              {selectedRest.address && (
+                <div className={styles.modalSection}>
+                  <span className={styles.sectionLabel}>地址</span>
+                  <p className={styles.modalText} style={{ fontSize: '0.9rem', color: '#666', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                    <MapPin size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+                    <span>{selectedRest.address}</span>
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className={styles.modalActions}>
+                {selectedRest.address && (
+                  <>
+                    <button onClick={(e) => handleCopyAddress(e, selectedRest.address)} className={styles.actionBtn}>
+                      <Copy size={16} /> 複製地址
+                    </button>
+                    <button onClick={(e) => handleOpenMap(e, selectedRest)} className={styles.actionBtn}>
+                      <Map size={16} /> 地圖
+                    </button>
+                  </>
+                )}
+                {!selectedRest.isCustom && (
+                  <button
+                    onClick={(e) => handleAddWish(e, selectedRest)}
+                    className={styles.actionBtn}
+                    style={{ backgroundColor: 'var(--color-coral)', color: 'white', border: 'none' }}
+                  >
+                    <Heart size={16} /> 加入許願池
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
