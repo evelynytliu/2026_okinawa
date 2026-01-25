@@ -209,8 +209,88 @@ export default function EditLocationPage() {
 
     // AI Auto-Fill State
     const [isAiLoading, setIsAiLoading] = useState(false);
+    const [aiLoadingField, setAiLoadingField] = useState(null); // Track which field is loading
     const [errorInfo, setErrorInfo] = useState(null);
 
+    // Cache for AI result to avoid redundant API calls
+    const [aiCache, setAiCache] = useState(null);
+
+    // Fetch AI data (with caching)
+    const fetchAiData = async () => {
+        if (!name) {
+            setErrorInfo({ title: '缺少資料', message: '請先輸入景點名稱' });
+            return null;
+        }
+        const key = localStorage.getItem('gemini_api_key');
+        if (!key) {
+            setErrorInfo({ title: '缺少金鑰', message: '請先至設定頁面輸入 Gemini API Key' });
+            return null;
+        }
+
+        // Use cache if available and name matches
+        if (aiCache && aiCache.name === name) {
+            return aiCache.data;
+        }
+
+        const result = await fetchPlaceDetails(name, key);
+
+        if (result && result.error) {
+            setErrorInfo({ title: 'AI 分析錯誤', message: result.error });
+            return null;
+        }
+
+        if (result && result.found) {
+            setAiCache({ name, data: result });
+            return result;
+        } else {
+            setErrorInfo({ title: '找不到相關資訊', message: '雖然成功連線，但 AI 回報找不到詳細資訊。' });
+            return null;
+        }
+    };
+
+    // Fill a specific field only
+    const handleAiFillField = async (field) => {
+        setAiLoadingField(field);
+        try {
+            const result = await fetchAiData();
+            if (!result) return;
+
+            switch (field) {
+                case 'address':
+                    if (result.address) setAddress(result.address);
+                    break;
+                case 'coords':
+                    if (result.lat) setLat(result.lat);
+                    if (result.lng) setLng(result.lng);
+                    break;
+                case 'details':
+                    if (result.details) setDetails(result.details);
+                    break;
+                case 'note':
+                    if (result.note) setNote(result.note);
+                    break;
+                case 'type':
+                    if (result.type) setType(result.type);
+                    break;
+                case 'image':
+                    if (result.image_url && result.image_url.trim()) {
+                        const imageUrl = result.image_url.trim();
+                        if (imageUrl.startsWith('http') && !images.some(img => img.url === imageUrl)) {
+                            setImages(prev => [...prev, { id: `ai-${Date.now()}`, url: imageUrl, isNew: true }]);
+                        }
+                    }
+                    break;
+            }
+            alert(`✨ ${field === 'coords' ? '座標' : field === 'address' ? '地址' : field === 'details' ? '介紹' : field === 'note' ? '備註' : field === 'type' ? '類型' : '圖片'} 已填入！`);
+        } catch (e) {
+            console.error(e);
+            setErrorInfo({ title: '系統錯誤', message: e.message || String(e) });
+        } finally {
+            setAiLoadingField(null);
+        }
+    };
+
+    // Fill ALL fields (original behavior)
     const handleAutoFill = async () => {
         if (!name) return setErrorInfo({ title: '缺少資料', message: '請先輸入景點名稱' });
         const key = localStorage.getItem('gemini_api_key');
@@ -232,7 +312,17 @@ export default function EditLocationPage() {
                 if (result.type) setType(result.type);
                 if (result.lat) setLat(result.lat);
                 if (result.lng) setLng(result.lng);
-                alert('✨ AI 資料已自動填入！');
+
+                // Auto-fill image URL if provided
+                if (result.image_url && result.image_url.trim()) {
+                    const imageUrl = result.image_url.trim();
+                    if (imageUrl.startsWith('http') && !images.some(img => img.url === imageUrl)) {
+                        setImages(prev => [...prev, { id: `ai-${Date.now()}`, url: imageUrl, isNew: true }]);
+                    }
+                }
+
+                setAiCache({ name, data: result });
+                alert('✨ AI 資料已全部填入！');
             } else {
                 setErrorInfo({ title: '找不到相關資訊', message: '雖然成功連線，但 AI 回報找不到詳細資訊。請嘗試更換名稱。' });
             }
@@ -692,9 +782,32 @@ export default function EditLocationPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                     <label style={{ fontWeight: '600', color: '#555', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>圖片庫 (第 1 張為封面)</span>
-                        <span style={{ fontSize: '0.8rem', color: '#888' }}>
-                            {images.length} 張 {images.some(i => i.file) && '(有未儲存圖片)'}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <button
+                                type="button"
+                                onClick={() => handleAiFillField('image')}
+                                disabled={aiLoadingField === 'image' || !name}
+                                style={{
+                                    fontSize: '0.7rem',
+                                    padding: '2px 8px',
+                                    background: aiLoadingField === 'image' ? '#ccc' : 'linear-gradient(135deg, #a855f7, #7c3aed)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    cursor: aiLoadingField === 'image' ? 'wait' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    opacity: !name ? 0.5 : 1,
+                                }}
+                            >
+                                {aiLoadingField === 'image' ? <Loader2 className="animate-spin" size={10} /> : '🔍'}
+                                找圖
+                            </button>
+                            <span style={{ fontSize: '0.8rem', color: '#888' }}>
+                                {images.length} 張 {images.some(i => i.file) && '(有未儲存圖片)'}
+                            </span>
+                        </div>
                     </label>
 
                     <DndContext
@@ -781,44 +894,72 @@ export default function EditLocationPage() {
 
                 {/* Name */}
                 <div className="form-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <label style={{ ...labelStyle, marginBottom: 0 }}>名稱</label>
-                        <button
-                            type="button"
-                            onClick={handleAutoFill}
-                            disabled={isAiLoading || !name}
-                            style={{
-                                fontSize: '0.8rem',
-                                padding: '4px 10px',
-                                background: isAiLoading ? '#ccc' : '#00b894',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '16px',
-                                cursor: isAiLoading ? 'wait' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                fontWeight: '500',
-                                transition: 'all 0.2s',
-                                opacity: !name ? 0.5 : 1,
-                                boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-                            }}
-                        >
-                            {isAiLoading ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
-                            {isAiLoading ? '分析中...' : 'AI 自動填寫'}
-                        </button>
-                    </div>
+                    <label style={labelStyle}>名稱</label>
                     <input
                         style={inputStyle}
                         value={name}
                         onChange={e => setName(e.target.value)}
-                        placeholder="景點名稱"
+                        placeholder="輸入景點名稱後，可用 AI 自動填寫其他欄位"
                     />
+                    {/* AI Auto-Fill All Button - Below Name Input */}
+                    <button
+                        type="button"
+                        onClick={handleAutoFill}
+                        disabled={isAiLoading || !name}
+                        style={{
+                            width: '100%',
+                            marginTop: '0.5rem',
+                            padding: '0.7rem 1rem',
+                            background: isAiLoading ? '#ccc' : 'linear-gradient(135deg, #00b894, #00a085)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '10px',
+                            cursor: isAiLoading ? 'wait' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.5rem',
+                            fontWeight: '600',
+                            fontSize: '0.9rem',
+                            transition: 'all 0.2s',
+                            opacity: !name ? 0.5 : 1,
+                            boxShadow: isAiLoading ? 'none' : '0 4px 12px rgba(0, 184, 148, 0.3)',
+                        }}
+                    >
+                        {isAiLoading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                        {isAiLoading ? 'AI 分析中...' : '✨ AI 自動填寫全部欄位'}
+                    </button>
+                    <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.4rem', textAlign: 'center' }}>
+                        一鍵填入地址、介紹、座標、圖片等資訊
+                    </p>
                 </div>
 
                 {/* Note */}
                 <div className="form-group">
-                    <label style={labelStyle}>行程備註 (顯示在列表)</label>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <label style={labelStyle}>行程備註 (顯示在列表)</label>
+                        <button
+                            type="button"
+                            onClick={() => handleAiFillField('note')}
+                            disabled={aiLoadingField === 'note' || !name}
+                            style={{
+                                fontSize: '0.7rem',
+                                padding: '2px 8px',
+                                background: aiLoadingField === 'note' ? '#ccc' : 'linear-gradient(135deg, #a855f7, #7c3aed)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '12px',
+                                cursor: aiLoadingField === 'note' ? 'wait' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                opacity: !name ? 0.5 : 1,
+                            }}
+                        >
+                            {aiLoadingField === 'note' ? <Loader2 className="animate-spin" size={10} /> : <Sparkles size={10} />}
+                            AI
+                        </button>
+                    </div>
                     <input
                         style={inputStyle}
                         value={note}
@@ -829,7 +970,30 @@ export default function EditLocationPage() {
 
                 {/* Address */}
                 <div className="form-group">
-                    <label style={labelStyle}>地址</label>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <label style={labelStyle}>地址</label>
+                        <button
+                            type="button"
+                            onClick={() => handleAiFillField('address')}
+                            disabled={aiLoadingField === 'address' || !name}
+                            style={{
+                                fontSize: '0.7rem',
+                                padding: '2px 8px',
+                                background: aiLoadingField === 'address' ? '#ccc' : 'linear-gradient(135deg, #a855f7, #7c3aed)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '12px',
+                                cursor: aiLoadingField === 'address' ? 'wait' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                opacity: !name ? 0.5 : 1,
+                            }}
+                        >
+                            {aiLoadingField === 'address' ? <Loader2 className="animate-spin" size={10} /> : <Sparkles size={10} />}
+                            AI
+                        </button>
+                    </div>
                     <div style={{ position: 'relative' }}>
                         <MapPin size={18} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
                         <input
@@ -843,7 +1007,30 @@ export default function EditLocationPage() {
 
                 {/* Details */}
                 <div className="form-group">
-                    <label style={labelStyle}>詳細資訊</label>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <label style={labelStyle}>詳細資訊</label>
+                        <button
+                            type="button"
+                            onClick={() => handleAiFillField('details')}
+                            disabled={aiLoadingField === 'details' || !name}
+                            style={{
+                                fontSize: '0.7rem',
+                                padding: '2px 8px',
+                                background: aiLoadingField === 'details' ? '#ccc' : 'linear-gradient(135deg, #a855f7, #7c3aed)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '12px',
+                                cursor: aiLoadingField === 'details' ? 'wait' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                opacity: !name ? 0.5 : 1,
+                            }}
+                        >
+                            {aiLoadingField === 'details' ? <Loader2 className="animate-spin" size={10} /> : <Sparkles size={10} />}
+                            AI
+                        </button>
+                    </div>
                     <textarea
                         style={{ ...inputStyle, minHeight: '150px', resize: 'vertical', lineHeight: '1.6' }}
                         value={details}
@@ -852,7 +1039,59 @@ export default function EditLocationPage() {
                     />
                 </div>
 
-                {/* Attachments Section */}
+                {/* Coordinates Section */}
+                <div className="form-group">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <label style={labelStyle}>座標 (用於路線地圖)</label>
+                        <button
+                            type="button"
+                            onClick={() => handleAiFillField('coords')}
+                            disabled={aiLoadingField === 'coords' || !name}
+                            style={{
+                                fontSize: '0.7rem',
+                                padding: '2px 8px',
+                                background: aiLoadingField === 'coords' ? '#ccc' : 'linear-gradient(135deg, #a855f7, #7c3aed)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '12px',
+                                cursor: aiLoadingField === 'coords' ? 'wait' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                opacity: !name ? 0.5 : 1,
+                            }}
+                        >
+                            {aiLoadingField === 'coords' ? <Loader2 className="animate-spin" size={10} /> : <Sparkles size={10} />}
+                            AI
+                        </button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <div style={{ flex: 1 }}>
+                            <input
+                                type="number"
+                                step="any"
+                                style={inputStyle}
+                                value={lat || ''}
+                                onChange={e => setLat(e.target.value ? parseFloat(e.target.value) : null)}
+                                placeholder="緯度 (Latitude)"
+                            />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <input
+                                type="number"
+                                step="any"
+                                style={inputStyle}
+                                value={lng || ''}
+                                onChange={e => setLng(e.target.value ? parseFloat(e.target.value) : null)}
+                                placeholder="經度 (Longitude)"
+                            />
+                        </div>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.3rem' }}>
+                        💡 點擊 AI 按鈕自動取得座標，用於行程頁面的路線地圖顯示
+                    </p>
+                </div>
+
                 <div className="form-group">
                     <label style={labelStyle}>相關文件 (PDF/照片)</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

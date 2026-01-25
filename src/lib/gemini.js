@@ -4,21 +4,28 @@ export async function fetchPlaceDetails(placeName, apiKey) {
     const prompt = `
     你是沖繩旅遊助手。請查詢地點「${placeName}」的資訊。
     
+    ⚠️ 重要規則 - 禁止幻覺：
+    - 只提供你確實知道且有信心的資訊
+    - 如果不確定某個欄位的正確值，請留空字串 "" 或 null
+    - 絕對不要編造地址、座標、或圖片連結
+    - 寧可留空也不要亂猜
+    
     請遵守以下規則：
     1. 即使名稱包含外語 (如 Pork Tamago) 或只有部分名稱，也請盡量推測最可能的沖繩知名地點 (例如：豬肉蛋飯糰)。
     2. 如果找不到該「特定分店」，請提供該「品牌」或該「地區」的一般性資訊即可，務必將 "found" 設為 true。
     3. 回傳純 JSON 物件 (不要有任何 Markdown 標記或額外文字)：
     {
-        "address": "請提供完整日文或英文地址 (若不確定請留空)",
-        "lat": 26.2123 (數值, 緯度),
-        "lng": 127.6792 (數值, 經度),
-        "image_url": "請盡量提供一張該地點的代表性圖片連結 (如 Wikimedia Commons 或 官方網站圖片)，必須是 .jpg 或 .png 結尾。若找不到請留空。",
+        "address": "完整日文或英文地址。若不確定請留空字串 ''",
+        "lat": 26.2123 或 null (數值, 緯度。若不確定請填 null),
+        "lng": 127.6792 或 null (數值, 經度。若不確定請填 null),
+        "image_url": "該地點的真實圖片連結 (必須是真實存在的 URL，如 Wikimedia Commons)。若找不到可靠來源請留空 ''",
         "details": "請用繁體中文介紹這個地點，包括特色美食或是什麼樣的地方 (約 50-80 字)。",
         "note": "一句話短評或推薦 (15字以內)",
         "type": "food", 
         "found": true
     }
-    4. Type 預設為 food。
+    4. Type 可選值: spot, food, stay, fun, shop, transport。預設為 food。
+    5. 如果完全不認識這個地點，請將 found 設為 false。
     `;
 
     // Trim key to avoid whitespace issues

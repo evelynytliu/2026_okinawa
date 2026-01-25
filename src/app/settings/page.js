@@ -1,10 +1,11 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useTrip } from '@/context/TripContext';
-import { Lock, Unlock, User, Users, Database, RotateCcw, Loader2, Share2, Download, X } from 'lucide-react';
+import { Lock, Unlock, User, Users, Database, RotateCcw, Loader2, Share2, Download, X, MapPin } from 'lucide-react';
 import styles from './page.module.css';
 import { ITINERARY, INITIAL_EXPENSES, LOCATION_DETAILS, SCHEDULE_PLAN, EXPENSE_CATEGORIES } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
+import { fetchPlaceDetails } from '@/lib/gemini';
 
 export default function SettingsPage() {
     const { isEditMode, toggleEditMode, jpyRate, updateJpyRate, members, families, updateMembersConfig } = useTrip();
@@ -37,6 +38,80 @@ export default function SettingsPage() {
         }
         localStorage.setItem('gemini_api_key', apiKey.trim());
         alert('API Key 已儲存！現在您可以嘗試新增餐廳了。');
+    };
+
+    // Batch Coordinate Update State
+    const [coordsLoading, setCoordsLoading] = useState(false);
+    const [coordsProgress, setCoordsProgress] = useState({ current: 0, total: 0, updated: 0 });
+
+    const handleBatchUpdateCoords = async () => {
+        const key = localStorage.getItem('gemini_api_key');
+        if (!key) {
+            alert('請先在上方輸入 Gemini API Key');
+            return;
+        }
+
+        if (!confirm('這將為所有缺少座標的景點自動取得經緯度。\n\n過程中會呼叫 Gemini API，可能需要幾分鐘。\n\n確定要繼續嗎？')) {
+            return;
+        }
+
+        setCoordsLoading(true);
+        setCoordsProgress({ current: 0, total: 0, updated: 0 });
+
+        try {
+            // Fetch locations without coordinates
+            const { data: locations, error } = await supabase
+                .from('locations')
+                .select('id, name')
+                .or('lat.is.null,lng.is.null');
+
+            if (error) throw error;
+
+            if (!locations || locations.length === 0) {
+                alert('✅ 所有景點都已有座標！');
+                setCoordsLoading(false);
+                return;
+            }
+
+            setCoordsProgress({ current: 0, total: locations.length, updated: 0 });
+
+            let updated = 0;
+
+            for (let i = 0; i < locations.length; i++) {
+                const loc = locations[i];
+                setCoordsProgress(prev => ({ ...prev, current: i + 1 }));
+
+                try {
+                    const result = await fetchPlaceDetails(loc.name, key);
+
+                    if (result && result.found && result.lat && result.lng) {
+                        const { error: updateError } = await supabase
+                            .from('locations')
+                            .update({ lat: result.lat, lng: result.lng })
+                            .eq('id', loc.id);
+
+                        if (!updateError) {
+                            updated++;
+                            setCoordsProgress(prev => ({ ...prev, updated }));
+                        }
+                    }
+                } catch (e) {
+                    console.error(`Failed to update ${loc.name}:`, e);
+                }
+
+                // Rate limit: wait 1.5 seconds between requests
+                if (i < locations.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                }
+            }
+
+            alert(`✅ 完成！\n\n更新了 ${updated} / ${locations.length} 個景點的座標`);
+        } catch (e) {
+            console.error('Batch update error:', e);
+            alert('發生錯誤：' + e.message);
+        } finally {
+            setCoordsLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -362,6 +437,48 @@ export default function SettingsPage() {
                             前往取得
                         </a>
                     </p>
+
+                    {/* Batch Update Coordinates */}
+                    <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px dashed #ddd' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                            <MapPin size={18} color="#0284c7" />
+                            <strong style={{ fontSize: '0.9rem' }}>批量更新座標</strong>
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: '#666', marginBottom: '0.8rem', lineHeight: '1.4' }}>
+                            為所有缺少座標的景點自動取得經緯度，用於路線地圖顯示。
+                        </p>
+                        <button
+                            onClick={handleBatchUpdateCoords}
+                            disabled={coordsLoading || !apiKey}
+                            style={{
+                                width: '100%',
+                                padding: '0.8rem',
+                                background: coordsLoading ? '#ccc' : 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '10px',
+                                fontWeight: '600',
+                                cursor: coordsLoading ? 'wait' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem',
+                                opacity: !apiKey ? 0.5 : 1,
+                            }}
+                        >
+                            {coordsLoading ? (
+                                <>
+                                    <Loader2 className="animate-spin" size={18} />
+                                    處理中 ({coordsProgress.current}/{coordsProgress.total}) - 已更新 {coordsProgress.updated} 個
+                                </>
+                            ) : (
+                                <>
+                                    <MapPin size={18} />
+                                    🚀 自動為所有景點取得座標
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
 

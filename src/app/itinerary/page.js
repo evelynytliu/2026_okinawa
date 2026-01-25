@@ -1,7 +1,8 @@
 "use client";
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MapPin, Edit2, Copy, Map, X, Info, Trash2, Plus, GripVertical, Loader2, FileText, ExternalLink, CloudRain } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { MapPin, Edit2, Copy, Map, X, Info, Trash2, Plus, GripVertical, Loader2, FileText, ExternalLink, CloudRain, Navigation, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTrip } from '@/context/TripContext';
 import { supabase } from '@/lib/supabase';
 import { ITINERARY } from '@/lib/data';
@@ -10,6 +11,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import WeatherBadge from '@/components/WeatherBadge';
 import { fetchOkinawaWeather } from '@/lib/weather';
 import { fetchPlaceDetails } from '@/lib/gemini';
+
+// Dynamic import for route map (SSR disabled for Leaflet)
+const DayRouteMap = dynamic(() => import('@/components/DayRouteMap'), {
+    ssr: false,
+    loading: () => <div style={{ height: 280, background: '#f5f5f5', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>地圖載入中...</div>
+});
 
 // DND Kit Imports
 import {
@@ -160,6 +167,7 @@ function ItineraryContent() {
     const [selectedLoc, setSelectedLoc] = useState(null);
     const [weatherData, setWeatherData] = useState({});
     const [activeDayIndex, setActiveDayIndex] = useState(0);
+    const [expandedMapDay, setExpandedMapDay] = useState(null); // Track which day's map is expanded
     const timelineRef = React.useRef(null);
     const dayRefs = React.useRef([]);
     const navContainerRef = React.useRef(null);
@@ -410,7 +418,9 @@ function ItineraryContent() {
                             details,
                             attachments,
                             type,
-                            hotel_id
+                            hotel_id,
+                            lat,
+                            lng
                         )
                     )
                 `)
@@ -738,6 +748,40 @@ function ItineraryContent() {
                                         </AnimatePresence>
                                     </ul>
                                 </SortableContext>
+
+                                {/* Route Map Toggle Button */}
+                                <button
+                                    className={styles.routeMapToggle}
+                                    onClick={() => setExpandedMapDay(expandedMapDay === dayItem.day_number ? null : dayItem.day_number)}
+                                >
+                                    <Navigation size={16} />
+                                    <span>當日路線</span>
+                                    {expandedMapDay === dayItem.day_number ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                </button>
+
+                                {/* Expandable Route Map */}
+                                <AnimatePresence>
+                                    {expandedMapDay === dayItem.day_number && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                            style={{ overflow: 'hidden' }}
+                                        >
+                                            <div className={styles.routeMapContainer}>
+                                                <DayRouteMap
+                                                    locations={dayItem.locations}
+                                                    dayLabel={`Day ${dayItem.day_number}`}
+                                                />
+                                                <div className={styles.routeMapLegend}>
+                                                    <span className={styles.legendItem}><span className={styles.legendDotStart}></span> 起點</span>
+                                                    <span className={styles.legendItem}><span className={styles.legendDotEnd}></span> 終點</span>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
 
                                 {isEditMode && (
                                     <button className={styles.addBtn} onClick={() => openAddModal(dayItem.day_number)}>

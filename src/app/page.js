@@ -3,11 +3,12 @@ import dynamic from 'next/dynamic';
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plane, Calendar, CreditCard, Plus, PieChart, Hotel, Wallet, Sparkles, ClipboardList, MapPin, X, Utensils, Heart, Trash2, Edit, Loader2, Search, Copy, Map, Edit2, ExternalLink } from 'lucide-react';
+import { Plane, Calendar, CreditCard, Plus, PieChart, Hotel, Wallet, Sparkles, ClipboardList, MapPin, X, Utensils, Heart, Trash2, Edit, Loader2, Search } from 'lucide-react';
 import { TRIP_DETAILS, LOCATION_DETAILS } from '@/lib/data';
 import { fetchPlaceDetails } from '@/lib/gemini';
 import { supabase } from '@/lib/supabase';
 import styles from './page.module.css';
+import LocationModal from '@/components/LocationModal';
 
 const RestaurantMap = dynamic(() => import('@/components/RestaurantMap'), { ssr: false, loading: () => <div style={{ height: 300, background: '#f0f0f0', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>地圖載入中...</div> });
 
@@ -357,32 +358,6 @@ export default function Dashboard() {
     }
   };
 
-  // Helper: Copy address to clipboard
-  const handleCopyAddress = async (e, address) => {
-    e.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(address);
-      alert('地址已複製！');
-    } catch {
-      alert('複製失敗');
-    }
-  };
-
-  // Helper: Open in Google Maps
-  const handleOpenMap = (e, rest) => {
-    e.stopPropagation();
-    // Prefer lat/lng if available, otherwise use address
-    let url;
-    if (rest.lat && rest.lng) {
-      url = `https://www.google.com/maps/search/?api=1&query=${rest.lat},${rest.lng}`;
-    } else if (rest.address) {
-      url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rest.address)}`;
-    } else {
-      url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rest.name)}`;
-    }
-    window.open(url, '_blank');
-  };
-
   return (
     <div className={styles.dashboard}>
       <header className={styles.header}>
@@ -427,33 +402,80 @@ export default function Dashboard() {
 
       {/* Recommended Restaurants Section */}
       <section className={`${styles.restaurantSection} fade-in`}>
-        <div className={styles.sectionHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* Section Header */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+          marginBottom: '1rem',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
+          padding: '0 0.5rem'
+        }}>
+          {/* Title - Left */}
           <div>
-            <h2 className={styles.sectionTitle}>Delicious Finds</h2>
-            <span style={{ fontSize: '0.8rem', color: '#888', fontWeight: 600, letterSpacing: '0.05em' }}>沖繩必吃</span>
+            <h2 style={{
+              margin: 0,
+              fontSize: '1.5rem',
+              fontWeight: 700,
+              color: 'var(--color-ink, #1a1a2e)',
+              fontFamily: 'var(--font-serif)',
+              letterSpacing: '-0.02em'
+            }}>Delicious Finds</h2>
+            <span style={{
+              fontSize: '0.8rem',
+              color: '#888',
+              fontWeight: 500,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase'
+            }}>沖繩必吃</span>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+
+          {/* Buttons - Right */}
+          <div style={{
+            display: 'flex',
+            gap: '8px'
+          }}>
             <Link
               href="/nearby"
               style={{
-                background: 'var(--color-sea-blue, #006994)', color: 'white', border: 'none',
-                borderRadius: '20px', padding: '6px 12px', fontSize: '0.85rem',
-                fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
-                boxShadow: '0 2px 5px rgba(0,0,0,0.1)', textDecoration: 'none'
+                background: 'var(--color-sea-blue, #006994)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '20px',
+                padding: '8px 14px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                boxShadow: '0 2px 8px rgba(0, 105, 148, 0.3)',
+                textDecoration: 'none',
+                transition: 'all 0.2s'
               }}
             >
-              <MapPin size={16} /> 附近
+              <MapPin size={15} /> 附近
             </Link>
             <button
               onClick={() => setShowAddModal(true)}
               style={{
-                background: 'var(--color-orange, #f97316)', color: 'white', border: 'none',
-                borderRadius: '20px', padding: '6px 12px', fontSize: '0.85rem',
-                fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
-                boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+                background: 'var(--color-orange, #f97316)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '20px',
+                padding: '8px 14px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                boxShadow: '0 2px 8px rgba(249, 115, 22, 0.3)',
+                transition: 'all 0.2s'
               }}
             >
-              <Plus size={16} /> 新增
+              <Plus size={15} /> 新增
             </button>
           </div>
         </div>
@@ -578,102 +600,14 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* Restaurant Modal */}
+      {/* Restaurant Modal - Using Reusable Component */}
       {selectedRest && (
-        <div className={styles.modalOverlay} onClick={() => setSelectedRest(null)}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
-            {/* Top Action Buttons */}
-            <div className={styles.topActions}>
-              {selectedRest.isCustom && (
-                <button
-                  onClick={() => router.push(`/itinerary/edit/${selectedRest.id}`)}
-                  className={styles.iconBtn}
-                  title="編輯"
-                >
-                  <Edit2 size={20} />
-                </button>
-              )}
-              <button className={styles.iconBtn} onClick={() => setSelectedRest(null)} title="關閉">
-                <X size={24} />
-              </button>
-            </div>
-
-            {/* Image */}
-            {selectedRest.img_url && (
-              <img src={selectedRest.img_url} className={styles.modalImage} alt={selectedRest.name} />
-            )}
-
-            <div className={styles.modalBody}>
-              {/* Title */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                <h3 className={styles.modalTitle}>{selectedRest.name}</h3>
-                <span style={{
-                  background: 'var(--color-coral-light, #ffe4e1)',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  color: 'var(--color-coral)',
-                  fontWeight: 'bold',
-                  fontSize: '0.75rem'
-                }}>
-                  食
-                </span>
-              </div>
-
-              {/* Intro */}
-              {selectedRest.intro && (
-                <div className={styles.modalSection}>
-                  <span className={styles.sectionLabel}>簡介</span>
-                  <p className={styles.modalText}>{selectedRest.intro}</p>
-                </div>
-              )}
-
-              {/* Dishes */}
-              {selectedRest.dishes && (
-                <div className={styles.modalSection}>
-                  <span className={styles.sectionLabel}>推薦餐點</span>
-                  <p className={styles.modalText} style={{ color: 'var(--color-coral)', fontWeight: 'bold' }}>
-                    <Utensils size={14} style={{ display: 'inline', marginRight: 5 }} />
-                    {selectedRest.dishes}
-                  </p>
-                </div>
-              )}
-
-              {/* Address */}
-              {selectedRest.address && (
-                <div className={styles.modalSection}>
-                  <span className={styles.sectionLabel}>地址</span>
-                  <p className={styles.modalText} style={{ fontSize: '0.9rem', color: '#666', display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                    <MapPin size={16} style={{ flexShrink: 0, marginTop: 2 }} />
-                    <span>{selectedRest.address}</span>
-                  </p>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className={styles.modalActions}>
-                {selectedRest.address && (
-                  <>
-                    <button onClick={(e) => handleCopyAddress(e, selectedRest.address)} className={styles.actionBtn}>
-                      <Copy size={16} /> 複製地址
-                    </button>
-                    <button onClick={(e) => handleOpenMap(e, selectedRest)} className={styles.actionBtn}>
-                      <Map size={16} /> 地圖
-                    </button>
-                  </>
-                )}
-                {!selectedRest.isCustom && (
-                  <button
-                    onClick={(e) => handleAddWish(e, selectedRest)}
-                    className={styles.actionBtn}
-                    style={{ backgroundColor: 'var(--color-coral)', color: 'white', border: 'none' }}
-                  >
-                    <Heart size={16} /> 加入許願池
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <LocationModal
+          location={selectedRest}
+          onClose={() => setSelectedRest(null)}
+          onAddWish={handleAddWish}
+          showEditButton={selectedRest.isCustom}
+        />
       )}
 
       {/* FAB */}

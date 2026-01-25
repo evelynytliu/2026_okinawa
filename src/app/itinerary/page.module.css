@@ -295,24 +295,26 @@
 }
 
 .editBtn {
-    background: transparent;
-    border: 1px solid #E5E5E5;
+    background: linear-gradient(135deg, #fafafa, #f5f5f5);
+    border: 1px solid #e5e5e5;
     color: var(--color-ink);
     cursor: pointer;
-    width: 32px;
-    height: 32px;
-    border-radius: 0;
-    /* Sharp button */
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .editBtn:hover {
-    background: var(--color-ink);
+    background: linear-gradient(135deg, var(--color-ink), #333);
     color: white;
     border-color: var(--color-ink);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* Location List - Magazine List Style */
@@ -687,4 +689,129 @@
     background: #FFFFFF;
     transform: scale(1.05);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Edit Mode Action Buttons */
+.editActions {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+    padding-left: 0.5rem;
+}
+
+.editItemBtn,
+.deleteItemBtn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.editItemBtn {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    color: #0284c7;
+}
+
+.editItemBtn:hover {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+}
+
+.deleteItemBtn {
+    background: linear-gradient(135deg, #fef2f2, #fee2e2);
+    color: #dc2626;
+}
+
+.deleteItemBtn:hover {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+/* Reorder handle styling */
+.reorderControls {
+    opacity: 0.4;
+    transition: opacity 0.2s;
+}
+
+.reorderControls:hover {
+    opacity: 1;
+}
+
+/* Route Map Section */
+.routeMapToggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1rem;
+    margin-top: 1rem;
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.routeMapToggle:hover {
+    background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+    border-color: #38bdf8;
+    color: #0284c7;
+    transform: translateY(-1px);
+}
+
+.routeMapContainer {
+    margin-top: 1rem;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+}
+
+.routeMapLegend {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 0.8rem;
+    background: linear-gradient(135deg, #fafafa, #f5f5f5);
+    border-top: 1px solid #e2e8f0;
+}
+
+.legendItem {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.legendDotStart,
+.legendDotEnd {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.legendDotStart {
+    background: #22c55e;
+}
+
+.legendDotEnd {
+    background: #ef4444;
 }
