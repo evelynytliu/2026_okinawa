@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { MapPin, Loader2, Navigation, CreditCard, Banknote, Store, ArrowLeft, Sparkles, ExternalLink, Star, Car, Footprints, Search, MapPinned } from 'lucide-react';
 import Link from 'next/link';
+import { callGemini } from '@/lib/gemini';
 import styles from './page.module.css';
 
 // 預設沖繩熱門地點
@@ -94,19 +95,11 @@ export default function NearbyPage() {
         try {
             const prompt = `請提供「${customInput}」這個地點的經緯度座標。如果是沖繩的地點，請提供精確座標。回覆格式必須是純 JSON（不要 Markdown）：{"lat": 26.xxxx, "lng": 127.xxxx, "name": "地點名稱"}`;
 
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }]
-                })
-            });
+            const result = await callGemini(prompt, apiKey);
 
-            if (!response.ok) throw new Error("AI 查詢失敗");
+            if (result.error) throw new Error(result.error);
 
-            const data = await response.json();
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            const jsonMatch = result.text.match(/\{[\s\S]*\}/);
 
             if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0]);
@@ -174,27 +167,18 @@ export default function NearbyPage() {
         `;
 
         try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }]
-                })
-            });
+            const result = await callGemini(prompt, apiKey);
 
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.error?.message || `API Error ${response.status}`);
+            if (result.error) {
+                throw new Error(result.error);
             }
 
-            const data = await response.json();
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
             // Parse JSON from response
-            const jsonMatch = text.match(/\[[\s\S]*\]/);
+            const jsonMatch = result.text.match(/\[[\s\S]*\]/);
             if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0]);
                 setRecommendations(parsed);
+                console.log(`✨ 使用模型: ${result.modelUsed}`);
             } else {
                 throw new Error("AI 回應格式錯誤");
             }

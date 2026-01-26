@@ -1,3 +1,119 @@
+// Available Gemini models in priority order (fallback chain)
+const GEMINI_MODELS = [
+    'gemini-2.5-flash',      // Primary model
+    'gemini-3-flash',        // Fallback 1
+    'gemini-2.5-flash-lite', // Fallback 2
+];
+
+// Rate limit error patterns to detect when to switch models
+const RATE_LIMIT_PATTERNS = [
+    'RESOURCE_EXHAUSTED',
+    'rate limit',
+    'quota exceeded',
+    'too many requests',
+    '429',
+    'limit exceeded',
+];
+
+/**
+ * Core function to call Gemini API with automatic model fallback
+ * @param {string} prompt - The prompt to send
+ * @param {string} apiKey - The Gemini API key
+ * @param {object} options - Additional options
+ * @returns {Promise<{text?: string, error?: string, modelUsed?: string}>}
+ */
+export async function callGemini(prompt, apiKey, options = {}) {
+    const { startModelIndex = 0, maxRetries = GEMINI_MODELS.length } = options;
+
+    const cleanKey = apiKey?.trim();
+    if (!cleanKey) {
+        return { error: 'API Key is required' };
+    }
+    if (!cleanKey.startsWith('AIza')) {
+        return { error: 'Invalid API Key format (must start with AIza)' };
+    }
+
+    let lastError = null;
+
+    for (let i = startModelIndex; i < Math.min(startModelIndex + maxRetries, GEMINI_MODELS.length); i++) {
+        const model = GEMINI_MODELS[i];
+
+        try {
+            console.log(`🤖 Trying model: ${model}${i > startModelIndex ? ' (fallback)' : ''}`);
+
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errMsg = `API Error ${response.status}`;
+                let isRateLimit = false;
+
+                try {
+                    const errJson = JSON.parse(errorText);
+                    if (errJson.error?.message) {
+                        errMsg = errJson.error.message;
+                    }
+                    if (errJson.error?.status) {
+                        errMsg = `${errJson.error.status}: ${errMsg}`;
+                    }
+                } catch (e) { }
+
+                // Check if this is a rate limit error
+                isRateLimit = RATE_LIMIT_PATTERNS.some(pattern =>
+                    errorText.toLowerCase().includes(pattern.toLowerCase())
+                );
+
+                if (isRateLimit && i < GEMINI_MODELS.length - 1) {
+                    console.warn(`⚠️ ${model} rate limited, switching to next model...`);
+                    lastError = errMsg;
+                    continue; // Try next model
+                }
+
+                // For non-rate-limit errors or last model, return error
+                return { error: errMsg, modelUsed: model };
+            }
+
+            const data = await response.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (!text) {
+                lastError = 'No text in response';
+                if (i < GEMINI_MODELS.length - 1) continue;
+                return { error: lastError, modelUsed: model };
+            }
+
+            console.log(`✅ Success with model: ${model}`);
+            return { text, modelUsed: model };
+
+        } catch (error) {
+            console.error(`❌ Error with ${model}:`, error);
+            lastError = error.message;
+
+            if (i < GEMINI_MODELS.length - 1) {
+                continue; // Try next model
+            }
+        }
+    }
+
+    return { error: lastError || 'All models failed', modelUsed: null };
+}
+
+/**
+ * Get list of available models for display
+ */
+export function getAvailableModels() {
+    return [...GEMINI_MODELS];
+}
+
 export async function fetchPlaceDetails(placeName, apiKey) {
     if (!apiKey) return null;
 
@@ -28,76 +144,28 @@ export async function fetchPlaceDetails(placeName, apiKey) {
     5. 如果完全不認識這個地點，請將 found 設為 false。
     `;
 
-    // Trim key to avoid whitespace issues
-    const cleanKey = apiKey.trim();
-    if (!cleanKey.startsWith('AIza')) {
-        return { error: "Invalid API Key format (must start with AIza)" };
+    // Use the shared callGemini function with automatic fallback
+    const result = await callGemini(prompt, apiKey);
+
+    if (result.error) {
+        return { error: result.error };
     }
 
+    const text = result.text;
+
     try {
-        // Using gemini-2.5-flash (Listed as top available model)
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${cleanKey}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: prompt }]
-                }]
-            })
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errMsg = `API Error ${response.status}`;
-
-            try {
-                const errJson = JSON.parse(errorText);
-                if (errJson.error && errJson.error.message) {
-                    errMsg = errJson.error.message;
-                }
-            } catch (e) { }
-
-            if (response.status === 404) {
-                // Diagnostic: Try to list available models
-                let availableModels = "Unknown";
-                try {
-                    const listResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`);
-                    if (listResp.ok) {
-                        const listData = await listResp.json();
-                        // Filter for generateContent supported models
-                        const models = listData.models
-                            .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
-                            .map(m => m.name.replace('models/', ''))
-                            .slice(0, 5); // Take top 5
-                        availableModels = models.join(', ');
-                    }
-                } catch (e) {
-                    console.error("ListModels failed", e);
-                }
-
-                return { error: `找不到模型 (404)。\n您的 Key 可用模型: [${availableModels}]\n\n請截圖此畫面回報，我們會根據您的可用模型調整設定。` };
-            }
-
-            return { error: errMsg };
-        }
-
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (!text) return { error: "No text in response" };
-
         // Robust JSON Extraction
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
             return { error: "Response invalid (No JSON found): " + text.substring(0, 50) + "..." };
         }
 
-        return JSON.parse(jsonMatch[0]);
-
+        const parsed = JSON.parse(jsonMatch[0]);
+        // Add modelUsed info for debugging
+        parsed._modelUsed = result.modelUsed;
+        return parsed;
     } catch (error) {
-        console.error("Gemini Fetch Error:", error);
-        return { error: error.message };
+        console.error("JSON Parse Error:", error);
+        return { error: "Failed to parse response: " + error.message };
     }
 }

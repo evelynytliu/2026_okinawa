@@ -413,22 +413,56 @@ export default function Dashboard() {
           padding: '0 0.5rem'
         }}>
           {/* Title - Left */}
-          <div>
+          <div style={{ position: 'relative', paddingLeft: '0.5rem' }}>
+            {/* Decorative colored bar */}
+            <div style={{
+              position: 'absolute',
+              left: 0,
+              top: '5px',
+              bottom: '5px',
+              width: '4px',
+              background: 'linear-gradient(to bottom, var(--color-gold), var(--color-orange))',
+              borderRadius: '2px'
+            }} />
+
             <h2 style={{
               margin: 0,
-              fontSize: '1.5rem',
-              fontWeight: 700,
+              fontSize: '1.8rem',
+              fontWeight: 800,
               color: 'var(--color-ink, #1a1a2e)',
               fontFamily: 'var(--font-serif)',
-              letterSpacing: '-0.02em'
-            }}>Delicious Finds</h2>
-            <span style={{
-              fontSize: '0.8rem',
-              color: '#888',
-              fontWeight: 500,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase'
-            }}>沖繩必吃</span>
+              letterSpacing: '-0.03em',
+              lineHeight: 1.1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              Delicious
+              <span style={{ color: 'var(--color-coral)', fontStyle: 'italic' }}>Finds</span>
+            </h2>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginTop: '4px'
+            }}>
+              <span style={{
+                fontSize: '0.75rem',
+                color: 'white',
+                background: '#444',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                fontWeight: 600,
+                letterSpacing: '0.05em',
+              }}>MUST EAT</span>
+              <span style={{
+                fontSize: '0.85rem',
+                color: '#666',
+                fontWeight: 500,
+                letterSpacing: '0.02em',
+              }}>沖繩在地美食選</span>
+            </div>
           </div>
 
           {/* Buttons - Right */}

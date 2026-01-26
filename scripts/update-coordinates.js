@@ -6,6 +6,23 @@
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://lqjqxfybwwxuvmrfxigl.supabase.co';
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxanF4Znlid3d4dXZtcmZ4aWdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc3OTE3MzAsImV4cCI6MjA1MzM2NzczMH0.0mfDnpA-vrLAboeK0BFYwfvnKSsDmMkbKNJNiU3CT9c';
 
+// Available Gemini models in priority order (fallback chain)
+const GEMINI_MODELS = [
+    'gemini-2.5-flash',      // Primary model
+    'gemini-3-flash',        // Fallback 1
+    'gemini-2.5-flash-lite', // Fallback 2
+];
+
+// Rate limit error patterns to detect when to switch models
+const RATE_LIMIT_PATTERNS = [
+    'RESOURCE_EXHAUSTED',
+    'rate limit',
+    'quota exceeded',
+    'too many requests',
+    '429',
+    'limit exceeded',
+];
+
 async function fetchPlaceDetails(placeName, apiKey) {
     const prompt = `
     你是沖繩旅遊助手。請查詢地點「${placeName}」的座標資訊。
@@ -23,33 +40,61 @@ async function fetchPlaceDetails(placeName, apiKey) {
     }
     `;
 
-    try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-            })
-        });
+    // Try each model in order
+    for (let i = 0; i < GEMINI_MODELS.length; i++) {
+        const model = GEMINI_MODELS[i];
 
-        if (!response.ok) {
-            console.error(`API Error for ${placeName}: ${response.status}`);
+        try {
+            console.log(`   🤖 Trying model: ${model}${i > 0 ? ' (fallback)' : ''}`);
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }]
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                const isRateLimit = RATE_LIMIT_PATTERNS.some(pattern =>
+                    errorText.toLowerCase().includes(pattern.toLowerCase())
+                );
+
+                if (isRateLimit && i < GEMINI_MODELS.length - 1) {
+                    console.log(`   ⚠️ ${model} rate limited, switching to next model...`);
+                    continue; // Try next model
+                }
+
+                console.error(`   API Error for ${placeName}: ${response.status}`);
+                return null;
+            }
+
+            const data = await response.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (!text) {
+                if (i < GEMINI_MODELS.length - 1) continue;
+                return null;
+            }
+
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+                if (i < GEMINI_MODELS.length - 1) continue;
+                return null;
+            }
+
+            console.log(`   ✅ Success with model: ${model}`);
+            return JSON.parse(jsonMatch[0]);
+
+        } catch (error) {
+            console.error(`   Error with ${model}:`, error.message);
+            if (i < GEMINI_MODELS.length - 1) continue;
             return null;
         }
-
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (!text) return null;
-
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) return null;
-
-        return JSON.parse(jsonMatch[0]);
-    } catch (error) {
-        console.error(`Error fetching ${placeName}:`, error.message);
-        return null;
     }
+
+    return null;
 }
 
 async function main() {

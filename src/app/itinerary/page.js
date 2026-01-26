@@ -455,6 +455,7 @@ function ItineraryContent() {
                 };
             });
 
+            console.log("Schedule Loaded w/ coords:", transformed);
             setSchedule(transformed);
         } catch (err) {
             console.error('Error fetching itinerary:', err);

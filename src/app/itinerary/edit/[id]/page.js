@@ -385,7 +385,9 @@ export default function EditLocationPage() {
                         gallery,
                         attachments,
                         type,
-                        hotel_id
+                        hotel_id,
+                        lat,
+                        lng
                     )
                 `)
                 .eq('id', itemId)
@@ -416,6 +418,9 @@ export default function EditLocationPage() {
 
             if (error) throw error;
             if (data) {
+                console.log("Fetched Item Data:", data);
+                console.log("Fetched Lat/Lng:", data.location.lat, data.location.lng);
+
                 setItemData(data);
                 setNote(data.note || '');
                 setName(data.location.name || '');
@@ -647,6 +652,10 @@ export default function EditLocationPage() {
             const dbUrls = finalImages.map(img => img.url);
             const finalImgUrl = dbUrls.length > 0 ? dbUrls[0] : null;
 
+            // Robust Lat/Lng Processing
+            const cleanLat = (lat === '' || lat === null || isNaN(parseFloat(lat))) ? null : parseFloat(lat);
+            const cleanLng = (lng === '' || lng === null || isNaN(parseFloat(lng))) ? null : parseFloat(lng);
+
             const { error: locError } = await supabase
                 .from('locations')
                 .update({
@@ -658,12 +667,18 @@ export default function EditLocationPage() {
                     attachments: attachments,
                     type: type,
                     hotel_id: type === 'stay' ? hotelId : null,
-                    lat: lat,
-                    lng: lng
+                    lat: cleanLat,
+                    lng: cleanLng
                 })
-                .eq('id', itemData.location_id); // Fixed: Use itemData
+                .eq('id', itemData.location_id);
+
+            if (!locError) {
+                console.log("Location update success");
+            }
 
             if (locError) {
+                console.error("Primary Update Error:", locError);
+
                 // Fallback for missing columns or schema cache issues
                 const isMissingColumn = locError.message?.includes('column "lat" does not exist') ||
                     locError.message?.includes("find the 'lat' column") ||
@@ -680,7 +695,9 @@ export default function EditLocationPage() {
                             gallery: dbUrls,
                             attachments: attachments,
                             type: type,
-                            hotel_id: type === 'stay' ? hotelId : null
+                            hotel_id: type === 'stay' ? hotelId : null,
+                            lat: cleanLat, // Ensure lat is included in retry
+                            lng: cleanLng  // Ensure lng is included in retry
                         })
                         .eq('id', itemData.location_id);
                     if (retryError) throw retryError;
@@ -698,8 +715,10 @@ export default function EditLocationPage() {
                 if (itemError) throw itemError;
             }
 
-            router.refresh(); // Refresh server state
+            // Force refresh to ensure map updates
+            router.refresh();
             router.back();
+
         } catch (err) {
             console.error('Save failed:', err);
             alert('儲存失敗：' + (err.message || '未知錯誤'));
@@ -1068,11 +1087,28 @@ export default function EditLocationPage() {
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <div style={{ flex: 1 }}>
                             <input
-                                type="number"
-                                step="any"
+                                type="text"
                                 style={inputStyle}
-                                value={lat || ''}
-                                onChange={e => setLat(e.target.value ? parseFloat(e.target.value) : null)}
+                                value={lat ?? ''}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    // Smart Paste: Lat, Lng
+                                    if (val.includes(',')) {
+                                        const [l, g] = val.split(',').map(s => s.trim());
+                                        if (!isNaN(parseFloat(l)) && !isNaN(parseFloat(g))) {
+                                            setLat(parseFloat(l));
+                                            setLng(parseFloat(g));
+                                            return;
+                                        }
+                                    }
+                                    setLat(val === '' ? null : val); // Temporarily allow string for typing
+                                }}
+                                onBlur={() => {
+                                    // Parse on blur
+                                    if (lat !== null && lat !== '') {
+                                        setLat(parseFloat(lat));
+                                    }
+                                }}
                                 placeholder="緯度 (Latitude)"
                             />
                         </div>
@@ -1081,14 +1117,14 @@ export default function EditLocationPage() {
                                 type="number"
                                 step="any"
                                 style={inputStyle}
-                                value={lng || ''}
+                                value={lng ?? ''}
                                 onChange={e => setLng(e.target.value ? parseFloat(e.target.value) : null)}
                                 placeholder="經度 (Longitude)"
                             />
                         </div>
                     </div>
                     <p style={{ fontSize: '0.75rem', color: '#888', marginTop: '0.3rem' }}>
-                        💡 點擊 AI 按鈕自動取得座標，用於行程頁面的路線地圖顯示
+                        💡 貼上「緯度,經度」格式 (如 26.21, 127.68) 可自動填入兩欄
                     </p>
                 </div>
 
