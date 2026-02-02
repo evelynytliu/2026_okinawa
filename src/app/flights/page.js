@@ -2,70 +2,11 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Plus, Trash2, Plane, Image as ImageIcon, Loader2, Pencil } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Plane, Image as ImageIcon, Loader2, Pencil, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import UniversalModal from '@/components/ui/UniversalModal';
+import SecureImage from '@/components/ui/SecureImage';
 import styles from './page.module.css';
-
-
-const SecureImage = ({ path, alt = "Image" }) => {
-    const [src, setSrc] = useState(null);
-    const [isZoomed, setIsZoomed] = useState(false);
-
-    useEffect(() => {
-        if (!path) return;
-        // If it's a full URL (http) or a local blob (blob:), use it directly
-        if (path.startsWith('http') || path.startsWith('blob:')) {
-            setSrc(path);
-            return;
-        }
-
-        // Otherwise treat as a storage path and get a signed URL
-        const fetchSignedUrl = async () => {
-            const { data, error } = await supabase.storage
-                .from('images')
-                .createSignedUrl(path, 60 * 60); // 1 hour validity
-
-            if (data?.signedUrl) {
-                setSrc(data.signedUrl);
-            }
-        };
-        fetchSignedUrl();
-    }, [path]);
-
-    if (!src) return <div style={{ width: '100%', height: '150px', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader2 className="spin" size={20} color="#ccc" /></div>;
-
-    return (
-        <>
-            <img
-                src={src}
-                alt={alt}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in' }}
-                onClick={() => setIsZoomed(true)}
-            />
-            {isZoomed && (
-                <div
-                    style={{
-                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                        background: 'rgba(0,0,0,0.9)', zIndex: 9999,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'zoom-out',
-                        animation: 'fadeIn 0.2s ease-out'
-                    }}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setIsZoomed(false);
-                    }}
-                >
-                    <img
-                        src={src}
-                        style={{ maxWidth: '95%', maxHeight: '95%', objectFit: 'contain', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}
-                    />
-                </div>
-            )}
-        </>
-    );
-};
 
 export default function FlightsPage() {
     const router = useRouter();
@@ -202,45 +143,63 @@ export default function FlightsPage() {
         }
     };
 
-    const handleEdit = (item) => {
-        setEditingId(item.id);
+    const [viewingFlight, setViewingFlight] = useState(null);
 
-        let images = [];
-        if (item.img_urls && Array.isArray(item.img_urls)) {
-            images = item.img_urls;
-        } else if (item.img_url) {
-            images = [item.img_url];
-        }
-
-        setFormData({
-            title: item.title,
-            content: item.content || '',
-            img_urls: images
-        });
-        setIsModalOpen(true);
+    const handleView = (item) => {
+        setViewingFlight(item);
     };
 
-    const handleDelete = async (id = null) => {
-        const targetId = id || editingId;
-        if (!targetId) return;
-        if (!confirm("確定要刪除這筆資料嗎？")) return;
+    const handleEdit = (item = null) => {
+        if (item) {
+            setEditingId(item.id);
 
-        try {
-            // Find item to delete its images
-            const item = flights.find(f => f.id === targetId);
-            if (item) {
+            let images = [];
+            if (item.img_urls && Array.isArray(item.img_urls)) {
+                images = item.img_urls;
+            } else if (item.img_url) {
+                images = [item.img_url];
+            }
+
+            setFormData({
+                title: item.title,
+                content: item.content || '',
+                img_urls: images
+            });
+            setIsModalOpen(true);
+        } else {
+            // New
+            setEditingId(null);
+            setFormData({ title: '', content: '', img_urls: [] });
+            setIsModalOpen(true);
+        }
+        if (viewingFlight) setViewingFlight(null);
+    };
+
+    const handleDeleteClick = async (item) => {
+        if (confirm("確定要刪除這筆資料嗎？")) {
+            try {
+                // Delete images first
                 const urlsToDelete = item.img_urls || (item.img_url ? [item.img_url] : []);
                 if (urlsToDelete.length > 0) {
                     await supabase.storage.from('images').remove(urlsToDelete);
                 }
-            }
 
-            await supabase.from('flight_info').delete().eq('id', targetId);
-            if (editingId) handleCloseModal();
-            fetchFlights();
-        } catch (err) {
-            alert("刪除失敗");
+                await supabase.from('flight_info').delete().eq('id', item.id);
+                if (viewingFlight?.id === item.id) setViewingFlight(null);
+                fetchFlights();
+            } catch (err) {
+                alert("刪除失敗");
+            }
         }
+    };
+
+    const handleDelete = async (id = null) => {
+        // Keep for compatibility if called from UniversalModal
+        const targetId = id || editingId;
+        if (!targetId) return;
+        const item = flights.find(f => f.id === targetId);
+        if (item) await handleDeleteClick(item);
+        handleCloseModal();
     };
 
     const handleCloseModal = () => {
@@ -275,7 +234,7 @@ export default function FlightsPage() {
                             else if (item.img_url) coverImage = item.img_url;
 
                             return (
-                                <div key={item.id} className={styles.card} onClick={() => handleEdit(item)}>
+                                <div key={item.id} className={styles.card} onClick={() => handleView(item)}>
                                     <div className={styles.cardTop}>
                                         <div className={styles.cardTitle}>
                                             <Plane size={18} />
@@ -291,7 +250,7 @@ export default function FlightsPage() {
 
                                     {coverImage && (
                                         <div className={styles.cardImage}>
-                                            <SecureImage path={coverImage} alt="Flight Info" />
+                                            <SecureImage path={coverImage} alt="Flight Info" style={{ pointerEvents: 'none', width: '100%', height: '100%', objectFit: 'cover' }} />
                                             {item.img_urls && item.img_urls.length > 1 && (
                                                 <div style={{
                                                     position: 'absolute', bottom: 8, right: 8,
@@ -311,7 +270,105 @@ export default function FlightsPage() {
                 </div>
             )}
 
-            <button className={styles.fab} onClick={() => { setEditingId(null); setFormData({ title: '', content: '', img_urls: [] }); setIsModalOpen(true); }}>
+            <button className={styles.fab} onClick={() => handleEdit(null)}>
+                <Plus size={32} />
+            </button>
+
+            {/* View Modal */}
+            {viewingFlight && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.5)', zIndex: 9999,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '1rem', backdropFilter: 'blur(4px)', animation: 'fadeIn 0.2s'
+                }} onClick={() => setViewingFlight(null)}>
+                    <div style={{
+                        background: 'white', width: '100%', maxWidth: '600px', maxHeight: '85vh',
+                        borderRadius: '20px', display: 'flex', flexDirection: 'column',
+                        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', overflow: 'hidden', position: 'relative'
+                    }} onClick={e => e.stopPropagation()}>
+
+                        {/* Top Actions */}
+                        <div style={{ position: 'absolute', top: '1rem', right: '1rem', display: 'flex', gap: '0.5rem', zIndex: 20 }}>
+                            <button onClick={() => handleEdit(viewingFlight)} title="編輯" style={{
+                                background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%', width: '36px', height: '36px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)', color: '#475569', backdropFilter: 'blur(4px)'
+                            }}>
+                                <Pencil size={20} />
+                            </button>
+                            <button onClick={() => handleDeleteClick(viewingFlight)} title="刪除" style={{
+                                background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%', width: '36px', height: '36px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)', color: '#475569', backdropFilter: 'blur(4px)'
+                            }}>
+                                <Trash2 size={20} />
+                            </button>
+                            <button onClick={() => setViewingFlight(null)} title="關閉" style={{
+                                background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%', width: '36px', height: '36px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)', color: '#475569', backdropFilter: 'blur(4px)'
+                            }}>
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        {/* Images */}
+                        {(() => {
+                            let displayImages = [];
+                            if (viewingFlight.img_urls && viewingFlight.img_urls.length > 0) displayImages = viewingFlight.img_urls;
+                            else if (viewingFlight.img_url) displayImages = [viewingFlight.img_url];
+
+                            if (displayImages.length > 0) {
+                                return (
+                                    <div style={{ width: '100%', background: '#f1f5f9', position: 'relative' }}>
+                                        {displayImages.length === 1 ? (
+                                            <div style={{ width: '100%', height: '300px', background: '#000' }}>
+                                                <SecureImage path={displayImages[0]} alt="Flight Image" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                            </div>
+                                        ) : (
+                                            <div style={{
+                                                display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory',
+                                                WebkitOverflowScrolling: 'touch', gap: '2px'
+                                            }}>
+                                                {displayImages.map((url, idx) => (
+                                                    <div key={idx} style={{
+                                                        flexShrink: 0, width: '100%', height: '300px',
+                                                        scrollSnapAlign: 'center', background: '#000'
+                                                    }}>
+                                                        <SecureImage path={url} alt={`Image ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                                    </div>
+                                                ))}
+                                                <div style={{
+                                                    position: 'absolute', bottom: '0.5rem', right: '0.5rem',
+                                                    background: 'rgba(0,0,0,0.6)', color: 'white', padding: '4px 10px',
+                                                    borderRadius: '12px', fontSize: '0.75rem'
+                                                }}>{displayImages.length} 張照片</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
+
+                        {/* Content */}
+                        <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+                            <h3 style={{
+                                fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem', color: '#1e293b'
+                            }}>{viewingFlight.title}</h3>
+                            <div style={{
+                                fontSize: '1rem', lineHeight: '1.6', color: '#334155', whiteSpace: 'pre-wrap'
+                            }}>
+                                {viewingFlight.content}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            )}
+
+            <button className={styles.fab} onClick={() => handleEdit(null)}>
                 <Plus size={32} />
             </button>
 
