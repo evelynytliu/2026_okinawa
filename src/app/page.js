@@ -9,7 +9,7 @@ import { fetchPlaceDetails } from '@/lib/gemini';
 import { supabase } from '@/lib/supabase';
 import styles from './page.module.css';
 import LocationModal from '@/components/LocationModal';
-import NotesDashboard from '@/components/NotesDashboard/NotesDashboard';
+import LocationModal from '@/components/LocationModal';
 
 const RestaurantMap = dynamic(() => import('@/components/RestaurantMap'), { ssr: false, loading: () => <div style={{ height: 300, background: '#f0f0f0', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>地圖載入中...</div> });
 
@@ -401,8 +401,7 @@ export default function Dashboard() {
         </Link>
       )}
 
-      {/* Notes Dashboard */}
-      <NotesDashboard />
+
 
       {/* Recommended Restaurants Section */}
       <section className={`${styles.restaurantSection} fade-in`}>
@@ -605,6 +604,11 @@ export default function Dashboard() {
             <Calendar size={32} color="var(--color-ink)" />
           </div>
           <span className={styles.cardLabel}>查看行程</span>
+        </Link>
+
+        <Link href="/notes" className={styles.bentoCard}>
+          <ClipboardList size={28} className={styles.cardIcon} color="#3b82f6" />
+          <span className={styles.cardLabel}>圖文筆記</span>
         </Link>
 
         <Link href="/expenses" className={styles.bentoCard}>
