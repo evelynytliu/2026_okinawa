@@ -149,7 +149,8 @@
 /* FAB */
 .fab {
     position: fixed;
-    bottom: 2rem;
+    bottom: 6rem;
+    /* Adjusted to avoid Navbar overlap (assuming ~80px navbar) */
     right: 2rem;
     width: 56px;
     height: 56px;
@@ -273,10 +274,21 @@
 }
 
 .textarea {
-    composes: input;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    width: 100%;
     min-height: 150px;
     resize: vertical;
     line-height: 1.6;
+}
+
+.textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .imageUploadArea {
