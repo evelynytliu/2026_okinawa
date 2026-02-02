@@ -9,7 +9,7 @@ import { fetchPlaceDetails } from '@/lib/gemini';
 import { supabase } from '@/lib/supabase';
 import styles from './page.module.css';
 import LocationModal from '@/components/LocationModal';
-import LocationModal from '@/components/LocationModal';
+
 
 const RestaurantMap = dynamic(() => import('@/components/RestaurantMap'), { ssr: false, loading: () => <div style={{ height: 300, background: '#f0f0f0', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>地圖載入中...</div> });
 
