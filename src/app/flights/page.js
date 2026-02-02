@@ -132,41 +132,52 @@ export default function FlightsPage() {
         });
     };
 
-    const handleUpload = async (files) => {
-        setUploading(true);
-        const newImages = [];
-        try {
-            for (const file of Array.from(files)) {
-                const compressedBlob = await compressImage(file);
-                const fileName = `flight_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
-                const { error } = await supabase.storage
-                    .from('images')
-                    .upload(fileName, compressedBlob);
-                if (error) throw error;
-                newImages.push(fileName);
-            }
-
-            setFormData(prev => ({
-                ...prev,
-                img_urls: [...prev.img_urls, ...newImages]
-            }));
-        } catch (err) {
-            alert("圖片上傳失敗: " + err.message);
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    const handleModalSubmit = async (data) => {
+    const handleModalSubmit = async (data, pendingFiles) => {
         if (!data.title) return;
         setIsSubmitting(true);
 
         try {
+            const finalImgUrls = [];
+
+            // 1. Upload new blobs
+            for (const url of data.img_urls) {
+                if (url.startsWith('blob:')) {
+                    const file = pendingFiles && pendingFiles[url];
+                    if (file) {
+                        const compressedBlob = await compressImage(file);
+                        const fileName = `flight_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+                        const { error } = await supabase.storage
+                            .from('images')
+                            .upload(fileName, compressedBlob);
+
+                        if (error) throw error;
+                        finalImgUrls.push(fileName);
+                    }
+                } else {
+                    finalImgUrls.push(url);
+                }
+            }
+
+            // 2. Identify and Delete Unused Images (only if editing)
+            if (editingId) {
+                // Find original object to compare
+                const originalItem = flights.find(f => f.id === editingId);
+                if (originalItem) {
+                    const oldUrls = originalItem.img_urls || (originalItem.img_url ? [originalItem.img_url] : []);
+                    const imagesToDelete = oldUrls.filter(url => !finalImgUrls.includes(url));
+
+                    if (imagesToDelete.length > 0) {
+                        await supabase.storage.from('images').remove(imagesToDelete);
+                    }
+                }
+            }
+
+            // 3. Save to DB
             const payload = {
                 title: data.title,
                 content: data.content,
-                img_urls: data.img_urls,
-                img_url: data.img_urls.length > 0 ? data.img_urls[0] : null
+                img_urls: finalImgUrls,
+                img_url: finalImgUrls.length > 0 ? finalImgUrls[0] : null
             };
 
             if (editingId) {
@@ -215,6 +226,15 @@ export default function FlightsPage() {
         if (!confirm("確定要刪除這筆資料嗎？")) return;
 
         try {
+            // Find item to delete its images
+            const item = flights.find(f => f.id === targetId);
+            if (item) {
+                const urlsToDelete = item.img_urls || (item.img_url ? [item.img_url] : []);
+                if (urlsToDelete.length > 0) {
+                    await supabase.storage.from('images').remove(urlsToDelete);
+                }
+            }
+
             await supabase.from('flight_info').delete().eq('id', targetId);
             if (editingId) handleCloseModal();
             fetchFlights();
@@ -301,8 +321,6 @@ export default function FlightsPage() {
                 title={editingId ? '編輯機票/航班資訊' : '新增機票/航班資訊'}
                 initialData={formData}
                 onSubmit={handleModalSubmit}
-                uploading={uploading}
-                onUpload={handleUpload}
                 isSubmitting={isSubmitting}
                 showDelete={!!editingId}
                 onDelete={() => handleDelete(editingId)}

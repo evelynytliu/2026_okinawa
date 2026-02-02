@@ -9,8 +9,6 @@ export default function UniversalModal({
     title,
     initialData = {},
     onSubmit,
-    uploading = false,
-    onUpload,
     isSubmitting = false,
     onDelete,
     showDelete = false
@@ -21,10 +19,11 @@ export default function UniversalModal({
         img_urls: []
     });
 
+    // Store actual File objects for pending uploads: { "blob:url...": File }
+    const [pendingFiles, setPendingFiles] = useState({});
+
     useEffect(() => {
         if (isOpen) {
-            // Normalize initial data
-            // Consolidate img_url (legacy) and img_urls into formData.img_urls
             let images = [];
             if (initialData.img_urls && Array.isArray(initialData.img_urls)) {
                 images = initialData.img_urls;
@@ -37,18 +36,37 @@ export default function UniversalModal({
                 content: initialData.content || '',
                 img_urls: images
             });
+            setPendingFiles({}); // Reset pending files
         }
     }, [isOpen, initialData]);
 
     if (!isOpen) return null;
 
+    const addFiles = (files) => {
+        const newImages = [];
+        const newPending = { ...pendingFiles };
+
+        Array.from(files).forEach(file => {
+            const blobUrl = URL.createObjectURL(file);
+            newImages.push(blobUrl);
+            newPending[blobUrl] = file;
+        });
+
+        setPendingFiles(newPending);
+        setFormData(prev => ({
+            ...prev,
+            img_urls: [...prev.img_urls, ...newImages]
+        }));
+    };
+
     const handleFileChange = (e) => {
-        if (e.target.files && onUpload) {
-            onUpload(e.target.files);
+        if (e.target.files && e.target.files.length > 0) {
+            addFiles(e.target.files);
         }
     };
 
     const handlePaste = (e) => {
+        // Allow pasting text unless it's only images
         const items = e.clipboardData.items;
         const blobFiles = [];
         for (let i = 0; i < items.length; i++) {
@@ -58,12 +76,22 @@ export default function UniversalModal({
                 e.preventDefault();
             }
         }
-        if (blobFiles.length > 0 && onUpload) {
-            onUpload(blobFiles);
+        if (blobFiles.length > 0) {
+            addFiles(blobFiles);
         }
     };
 
     const removeImage = (index) => {
+        const urlToRemove = formData.img_urls[index];
+
+        // If it's a pending file, clean up the object URL and pending map
+        if (urlToRemove.startsWith('blob:')) {
+            URL.revokeObjectURL(urlToRemove);
+            const newPending = { ...pendingFiles };
+            delete newPending[urlToRemove];
+            setPendingFiles(newPending);
+        }
+
         setFormData(prev => ({
             ...prev,
             img_urls: prev.img_urls.filter((_, i) => i !== index)
@@ -72,7 +100,8 @@ export default function UniversalModal({
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        onSubmit(formData);
+        // Pass both the form data and the pending files dictionary to the parent
+        onSubmit(formData, pendingFiles);
     };
 
     return (
@@ -181,7 +210,6 @@ export default function UniversalModal({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#475569' }}>圖片 ({formData.img_urls.length})</label>
-                            {uploading && <span style={{ fontSize: '0.8rem', color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '4px' }}><Loader2 size={12} className="animate-spin" /> 上傳中...</span>}
                         </div>
 
                         <label style={{
@@ -200,7 +228,6 @@ export default function UniversalModal({
                                 multiple
                                 onChange={handleFileChange}
                                 style={{ display: 'none' }}
-                                disabled={uploading}
                             />
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                 <ImageIcon size={32} color="#94a3b8" style={{ marginBottom: '0.5rem' }} />
@@ -277,18 +304,18 @@ export default function UniversalModal({
                         </button>
                     ) : <div />}
 
-                    <button type="submit" form="universal-modal-form" disabled={isSubmitting || uploading} style={{
+                    <button type="submit" form="universal-modal-form" disabled={isSubmitting} style={{
                         background: '#3b82f6',
                         color: 'white',
                         border: 'none',
                         padding: '0.75rem 1.5rem',
                         borderRadius: '8px',
                         fontWeight: 600,
-                        cursor: (isSubmitting || uploading) ? 'not-allowed' : 'pointer',
+                        cursor: (isSubmitting) ? 'not-allowed' : 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
-                        opacity: (isSubmitting || uploading) ? 0.7 : 1
+                        opacity: (isSubmitting) ? 0.7 : 1
                     }}>
                         {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : null}
                         {isSubmitting ? '儲存中' : '儲存'}

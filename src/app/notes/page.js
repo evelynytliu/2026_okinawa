@@ -133,17 +133,50 @@ export default function NotesPage() {
         }
     };
 
-    const handleModalSubmit = async (data) => {
-        // data contains { title, content, img_urls }
+    const handleModalSubmit = async (data, pendingFiles) => {
+        // data contains { title, content, img_urls (mix of paths and blobs) }
+        // pendingFiles contains { "blob:...": File }
         if (!data.title) return;
         setIsSubmitting(true);
 
         try {
+            // 1. Upload new images (blob urls) and replace them with real paths
+            const finalImgUrls = [];
+
+            for (const url of data.img_urls) {
+                if (url.startsWith('blob:')) {
+                    const file = pendingFiles && pendingFiles[url];
+                    if (file) {
+                        const compressedBlob = await compressImage(file);
+                        const fileName = `note_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+                        const { error } = await supabase.storage
+                            .from('images') // Assumes bucket 'images' exists
+                            .upload(fileName, compressedBlob);
+
+                        if (error) throw error;
+                        finalImgUrls.push(fileName);
+                    }
+                } else {
+                    finalImgUrls.push(url);
+                }
+            }
+
+            // 2. Identify and Delete Unused Images (only if editing)
+            if (editingNote) {
+                const oldUrls = editingNote.img_urls || (editingNote.img_url ? [editingNote.img_url] : []);
+                const imagesToDelete = oldUrls.filter(url => !finalImgUrls.includes(url));
+
+                if (imagesToDelete.length > 0) {
+                    await supabase.storage.from('images').remove(imagesToDelete);
+                }
+            }
+
+            // 3. Save to DB
             const payload = {
                 title: data.title,
                 content: data.content,
-                img_urls: data.img_urls,
-                img_url: data.img_urls.length > 0 ? data.img_urls[0] : null
+                img_urls: finalImgUrls,
+                img_url: finalImgUrls.length > 0 ? finalImgUrls[0] : null
             };
 
             if (editingNote) {
@@ -267,8 +300,6 @@ export default function NotesPage() {
                 title={editingNote ? '編輯筆記' : '新增筆記'}
                 initialData={formData}
                 onSubmit={handleModalSubmit}
-                uploading={uploading}
-                onUpload={handleUpload}
                 isSubmitting={isSubmitting}
                 showDelete={!!editingNote}
                 onDelete={handleDelete}
