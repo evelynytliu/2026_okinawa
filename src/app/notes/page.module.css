@@ -197,13 +197,42 @@
     background: white;
     width: 100%;
     max-width: 600px;
-    max-height: 90vh;
+    max-height: 85vh;
+    /* Reduced from 90vh to leave room for browser bars */
     border-radius: 20px;
     display: flex;
     flex-direction: column;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     overflow: hidden;
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    /* Ensure context for absolute children if needed */
+}
+
+/* Ensure modal body scrolls and footer stays visible but doesn't overlap weirdly */
+.modalBody {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+    /* Takes up remaining space */
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    -webkit-overflow-scrolling: touch;
+    /* Smooth scrolling on iOS */
+}
+
+/* Ensure footer is always at bottom of modal content area */
+.modalFooter {
+    padding: 1.25rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    flex-shrink: 0;
+    /* Prevent footer from shrinking */
+    z-index: 10;
 }
 
 .modalHeader {
