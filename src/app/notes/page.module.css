@@ -62,6 +62,43 @@
     flex-direction: column;
     height: 100%;
     border: 1px solid transparent;
+    position: relative;
+    /* For actions absolute positioning */
+}
+
+.cardActions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+.actionBtn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #475569;
+    backdrop-filter: blur(4px);
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.actionBtn:hover {
+    transform: scale(1.1);
+    background: white;
+    color: #3b82f6;
+}
+
+.deleteActionBtn:hover {
+    color: #ef4444;
 }
 
 .noteCard:hover {
@@ -444,4 +481,96 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* View Modal Specific Styles */
+.topActions {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    z-index: 20;
+}
+
+.iconBtn {
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s;
+    color: #475569;
+    backdrop-filter: blur(4px);
+}
+
+.iconBtn:hover {
+    background: white;
+    transform: scale(1.1);
+    color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.imageSection {
+    position: relative;
+    width: 100%;
+    background: #f1f5f9;
+}
+
+.viewModalImage {
+    width: 100%;
+    height: auto;
+    max-height: 300px;
+    object-fit: contain;
+    background: #000;
+}
+
+.imageScrollContainer {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 2px;
+}
+
+.scrollImage {
+    flex-shrink: 0;
+    width: 100%;
+    height: 300px;
+    object-fit: contain;
+    background: #000;
+    scroll-snap-align: center;
+}
+
+.scrollBadge {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+}
+
+.viewContent {
+    padding: 1.5rem;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #334155;
+    white-space: pre-wrap;
+}
+
+.viewTitle {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #1e293b;
+    padding: 1.5rem;
+    padding-bottom: 0.5rem;
 }

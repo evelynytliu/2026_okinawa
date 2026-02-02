@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Plus, Trash2, Image as ImageIcon, Loader2, X, StickyNote, Images } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Image as ImageIcon, Loader2, X, StickyNote, Images, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SecureImage from '@/components/ui/SecureImage';
 import UniversalModal from '@/components/ui/UniversalModal';
@@ -48,10 +48,15 @@ export default function NotesPage() {
         }
     };
 
-    const handleOpenModal = (note = null) => {
+    const [viewingNote, setViewingNote] = useState(null);
+
+    const handleView = (note) => {
+        setViewingNote(note);
+    };
+
+    const handleEdit = (note) => {
+        setEditingNote(note);
         if (note) {
-            setEditingNote(note);
-            // Handle legacy single image (img_url) vs new multiple images (img_urls)
             let images = [];
             if (note.img_urls && Array.isArray(note.img_urls)) {
                 images = note.img_urls;
@@ -64,10 +69,32 @@ export default function NotesPage() {
                 content: note.content || '',
                 img_urls: images
             });
-        } else {
-            setEditingNote(null);
-            setFormData({ title: '', content: '', img_urls: [] });
         }
+        setIsModalOpen(true);
+        if (viewingNote) setViewingNote(null);
+    };
+
+    // Deletes note based on object passed, rather than relying on editingNote state
+    const handleDeleteClick = async (note) => {
+        if (confirm("確定要刪除此筆記嗎？")) {
+            try {
+                const urlsToDelete = note.img_urls || (note.img_url ? [note.img_url] : []);
+                if (urlsToDelete.length > 0) {
+                    await supabase.storage.from('images').remove(urlsToDelete);
+                }
+                await supabase.from('notes').delete().eq('id', note.id);
+                if (viewingNote?.id === note.id) setViewingNote(null);
+                fetchNotes();
+            } catch (err) {
+                alert("刪除失敗");
+            }
+        }
+    };
+
+    const handleOpenModal = (note = null) => {
+        // This is only for Add New
+        setEditingNote(null);
+        setFormData({ title: '', content: '', img_urls: [] });
         setIsModalOpen(true);
     };
 
@@ -244,7 +271,7 @@ export default function NotesPage() {
                         }
 
                         return (
-                            <div key={note.id} className={styles.noteCard} onClick={() => handleOpenModal(note)}>
+                            <div key={note.id} className={styles.noteCard} onClick={() => handleView(note)}>
                                 <div className={styles.cardImage}>
                                     {coverImage ? (
                                         <SecureImage path={coverImage} alt={note.title} style={{ pointerEvents: 'none', width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -294,6 +321,64 @@ export default function NotesPage() {
                 <Plus size={32} strokeWidth={2.5} />
             </button>
 
+            {/* View Modal */}
+            {viewingNote && (
+                <div className={styles.modalOverlay} onClick={() => setViewingNote(null)} style={{ zIndex: 9999 }}>
+                    <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+
+                        {/* Top Actions */}
+                        <div className={styles.topActions}>
+                            <button className={styles.iconBtn} onClick={() => handleEdit(viewingNote)} title="編輯">
+                                <Pencil size={20} />
+                            </button>
+                            <button className={styles.iconBtn} onClick={() => handleDeleteClick(viewingNote)} title="刪除">
+                                <Trash2 size={20} />
+                            </button>
+                            <button className={styles.iconBtn} onClick={() => setViewingNote(null)} title="關閉">
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        {/* Images */}
+                        {(() => {
+                            let displayImages = [];
+                            if (viewingNote.img_urls && viewingNote.img_urls.length > 0) displayImages = viewingNote.img_urls;
+                            else if (viewingNote.img_url) displayImages = [viewingNote.img_url];
+
+                            if (displayImages.length === 0) return null;
+
+                            return (
+                                <div className={styles.imageSection}>
+                                    {displayImages.length === 1 ? (
+                                        <div style={{ width: '100%', height: '300px', background: '#000' }}>
+                                            <SecureImage path={displayImages[0]} alt="Note Image" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                        </div>
+                                    ) : (
+                                        <div className={styles.imageScrollContainer}>
+                                            {displayImages.map((url, idx) => (
+                                                <div key={idx} className={styles.scrollImage}>
+                                                    <SecureImage path={url} alt={`Image ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                                </div>
+                                            ))}
+                                            <div className={styles.scrollBadge}>{displayImages.length} 張照片</div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
+                        {/* Content */}
+                        <div className={styles.modalBody}>
+                            <h3 className={styles.viewTitle} style={{ paddingLeft: 0, paddingTop: 0 }}>{viewingNote.title}</h3>
+                            <div className={styles.viewContent} style={{ paddingLeft: 0, paddingRight: 0 }}>
+                                {viewingNote.content}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            )}
+
             <UniversalModal
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}
@@ -301,7 +386,7 @@ export default function NotesPage() {
                 initialData={formData}
                 onSubmit={handleModalSubmit}
                 isSubmitting={isSubmitting}
-                showDelete={!!editingNote}
+                showDelete={false} // Delete is handled via View Modal
                 onDelete={handleDelete}
             />
         </div>
