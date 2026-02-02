@@ -279,8 +279,26 @@ export default function NotesPage() {
                 )}
             </div>
 
-            <button className={styles.fab} onClick={() => handleOpenModal(null)}>
-                <Plus size={28} />
+            <button className={styles.fab} onClick={() => handleOpenModal(null)} style={{
+                bottom: '130px',
+                zIndex: 200,
+                width: '68px',
+                height: '68px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                gap: '0px',
+                background: '#3b82f6',
+                color: 'white',
+                position: 'fixed',
+                right: '1.5rem',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
+                border: 'none',
+                cursor: 'pointer'
+            }}>
+                <Plus size={32} strokeWidth={2.5} />
             </button>
 
             {/* Modal */}
