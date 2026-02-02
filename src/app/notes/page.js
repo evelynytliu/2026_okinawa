@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Plus, Trash2, Image as ImageIcon, Loader2, X, StickyNote, Images } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import SecureImage from '@/components/ui/SecureImage';
+import UniversalModal from '@/components/ui/UniversalModal';
 import styles from './page.module.css';
 
 export default function NotesPage() {
@@ -76,7 +77,9 @@ export default function NotesPage() {
         setFormData({ title: '', content: '', img_urls: [] });
     };
 
-    // --- Image Handling ---
+    // --- Image Handling Helpers (Still used for direct upload if needed, but Modal handles its own uploads usually) ---
+    // Actually UniversalModal handles file selection, but we need to provide the onUpload handler.
+
     const compressImage = (file) => {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -104,22 +107,24 @@ export default function NotesPage() {
         });
     };
 
-    const uploadImage = async (file) => {
+    const handleUpload = async (files) => {
+        setUploading(true);
+        const newImages = [];
         try {
-            setUploading(true);
-            const compressedBlob = await compressImage(file);
-            const fileName = `note_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+            for (const file of Array.from(files)) {
+                const compressedBlob = await compressImage(file);
+                const fileName = `note_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+                const { error } = await supabase.storage
+                    .from('images')
+                    .upload(fileName, compressedBlob);
+                if (error) throw error;
+                newImages.push(fileName);
+            }
 
-            const { data, error } = await supabase.storage
-                .from('images')
-                .upload(fileName, compressedBlob);
-
-            if (error) throw error;
-
-            // Append to existing images
+            // Update local state for the modal to reflect new images
             setFormData(prev => ({
                 ...prev,
-                img_urls: [...prev.img_urls, fileName]
+                img_urls: [...prev.img_urls, ...newImages]
             }));
         } catch (err) {
             alert("圖片上傳失敗: " + err.message);
@@ -128,57 +133,17 @@ export default function NotesPage() {
         }
     };
 
-    const handleFileChange = (e) => {
-        if (e.target.files) {
-            // Upload sequentially to avoid state race conditions or heavy load
-            const files = Array.from(e.target.files);
-            const uploadFiles = async () => {
-                for (const file of files) {
-                    await uploadImage(file);
-                }
-            };
-            uploadFiles();
-        }
-    };
-
-    const handlePaste = (e) => {
-        const items = e.clipboardData.items;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf('image') !== -1) {
-                const blob = items[i].getAsFile();
-                uploadImage(blob);
-                e.preventDefault();
-            }
-        }
-    };
-
-    const removeImage = (index) => {
-        setFormData(prev => ({
-            ...prev,
-            img_urls: prev.img_urls.filter((_, i) => i !== index)
-        }));
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!formData.title) return;
+    const handleModalSubmit = async (data) => {
+        // data contains { title, content, img_urls }
+        if (!data.title) return;
         setIsSubmitting(true);
 
         try {
-            // Prepare data - check if user DB has 'img_urls' column yet
-            // If not, we might need to fallback? 
-            // Actually, we'll assume the migration script will be run.
-            // But to be safe with legacy row, we sync img_url (first image) for backward compat slightly?
-            // No, let's just use img_urls if possible.
-
             const payload = {
-                title: formData.title,
-                content: formData.content,
-                // We will try to save to 'img_urls'. 
-                // If the table schema is old (only 'img_url'), we save the first image there.
-                // But we actually need to update the Schema first.
-                img_urls: formData.img_urls,
-                img_url: formData.img_urls.length > 0 ? formData.img_urls[0] : null // Backward compat
+                title: data.title,
+                content: data.content,
+                img_urls: data.img_urls,
+                img_url: data.img_urls.length > 0 ? data.img_urls[0] : null
             };
 
             if (editingNote) {
@@ -196,11 +161,7 @@ export default function NotesPage() {
             handleCloseModal();
             fetchNotes();
         } catch (err) {
-            if (err.message?.includes('img_urls')) {
-                alert("儲存失敗：資料庫尚未更新支援多張圖片。請執行更新腳本。");
-            } else {
-                alert("儲存失敗: " + err.message);
-            }
+            alert("儲存失敗: " + err.message);
         } finally {
             setIsSubmitting(false);
         }
@@ -240,8 +201,7 @@ export default function NotesPage() {
                     </div>
                 ) : (
                     notes.map(note => {
-                        // Determine images to show
-                        let coverImage = note.img_url; // fallback
+                        let coverImage = note.img_url;
                         let count = 0;
                         if (note.img_urls && Array.isArray(note.img_urls) && note.img_urls.length > 0) {
                             coverImage = note.img_urls[0];
@@ -301,91 +261,18 @@ export default function NotesPage() {
                 <Plus size={32} strokeWidth={2.5} />
             </button>
 
-            {/* Modal */}
-            {isModalOpen && (
-                <div className={styles.modalOverlay} onClick={handleCloseModal}>
-                    <div className={styles.modalContent} onClick={e => e.stopPropagation()} onPaste={handlePaste}>
-                        <div className={styles.modalHeader}>
-                            <h3 className={styles.modalTitle}>
-                                {editingNote ? '編輯筆記' : '新增筆記'}
-                            </h3>
-                            <button className={styles.closeBtn} onClick={handleCloseModal}>
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSubmit} className={styles.modalBody}>
-                            <div className={styles.inputGroup}>
-                                <label className={styles.label}>標題</label>
-                                <input
-                                    className={styles.input}
-                                    value={formData.title}
-                                    onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                    placeholder="輸入標題..."
-                                    required
-                                    autoFocus
-                                />
-                            </div>
-
-                            <div className={styles.inputGroup}>
-                                <label className={styles.label}>內容</label>
-                                <textarea
-                                    className={styles.textarea}
-                                    value={formData.content}
-                                    onChange={e => setFormData({ ...formData, content: e.target.value })}
-                                    placeholder="輸入筆記內容..."
-                                />
-                            </div>
-
-                            <div className={styles.inputGroup}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <label className={styles.label}>圖片 ({formData.img_urls.length})</label>
-                                    {uploading && <span style={{ fontSize: '0.8rem', color: '#3b82f6', display: 'flex', alignItems: 'center', gap: '4px' }}><Loader2 size={12} className="animate-spin" /> 上傳中...</span>}
-                                </div>
-
-                                <label className={styles.imageUploadArea}>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        onChange={handleFileChange}
-                                        style={{ display: 'none' }}
-                                        disabled={uploading}
-                                    />
-                                    <ImageIcon size={32} color="#94a3b8" style={{ marginBottom: '0.5rem' }} />
-                                    <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>點擊上傳或直接貼上 (Ctrl+V)</p>
-                                </label>
-
-                                {formData.img_urls.length > 0 && (
-                                    <div className={styles.previewGrid}>
-                                        {formData.img_urls.map((path, idx) => (
-                                            <div key={idx} className={styles.previewItem}>
-                                                <SecureImage path={path} className={styles.previewImage} />
-                                                <button type="button" className={styles.removeImageBtn} onClick={() => removeImage(idx)}>
-                                                    <X size={14} />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </form>
-
-                        <div className={styles.modalFooter}>
-                            {editingNote ? (
-                                <button type="button" className={styles.deleteBtn} onClick={handleDelete}>
-                                    <Trash2 size={18} /> 刪除
-                                </button>
-                            ) : <div />}
-
-                            <button type="button" className={styles.submitBtn} onClick={handleSubmit} disabled={isSubmitting || uploading}>
-                                {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : null}
-                                {isSubmitting ? '儲存中' : '儲存筆記'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <UniversalModal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+                title={editingNote ? '編輯筆記' : '新增筆記'}
+                initialData={formData}
+                onSubmit={handleModalSubmit}
+                uploading={uploading}
+                onUpload={handleUpload}
+                isSubmitting={isSubmitting}
+                showDelete={!!editingNote}
+                onDelete={handleDelete}
+            />
         </div>
     );
 }

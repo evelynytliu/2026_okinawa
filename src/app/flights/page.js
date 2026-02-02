@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Plus, Trash2, Plane, Image as ImageIcon, Loader2, Pencil } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import UniversalModal from '@/components/ui/UniversalModal';
 import styles from './page.module.css';
 
 
@@ -79,7 +80,7 @@ export default function FlightsPage() {
     const [formData, setFormData] = useState({
         title: '',
         content: '',
-        img_url: ''
+        img_urls: []
     });
 
     useEffect(() => {
@@ -98,74 +99,12 @@ export default function FlightsPage() {
             setFlights(data || []);
         } catch (err) {
             console.error(err);
-            // Ignore error for now if table missing, simply show empty
         } finally {
             setLoading(false);
         }
     };
 
-    const handleAdd = async (e) => {
-        e.preventDefault();
-        if (!formData.title) return;
-        setIsSubmitting(true);
-
-        try {
-            if (editingId) {
-                // Update
-                const { error } = await supabase
-                    .from('flight_info')
-                    .update({
-                        title: formData.title,
-                        content: formData.content,
-                        img_url: formData.img_url
-                    })
-                    .eq('id', editingId);
-                if (error) throw error;
-            } else {
-                // Insert
-                const { error } = await supabase
-                    .from('flight_info')
-                    .insert({
-                        title: formData.title,
-                        content: formData.content,
-                        img_url: formData.img_url
-                    });
-                if (error) throw error;
-            }
-
-            handleCloseModal();
-            fetchFlights();
-        } catch (err) {
-            alert(editingId ? "更新失敗: " : "新增失敗: " + err.message);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleEdit = (item) => {
-        setEditingId(item.id);
-        setFormData({
-            title: item.title,
-            content: item.content || '',
-            img_url: item.img_url || ''
-        });
-        setIsModalOpen(true);
-    };
-
-    const handleDelete = async (id) => {
-        if (!confirm("確定要刪除這筆資料嗎？")) return;
-        await supabase.from('flight_info').delete().eq('id', id);
-        fetchFlights();
-    };
-
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        setEditingId(null);
-        setFormData({ title: '', content: '', img_url: '' });
-    };
-
-    // --- Image Handling ---
-
+    // --- Image Handling Helpers ---
     const compressImage = (file) => {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -187,48 +126,107 @@ export default function FlightsPage() {
 
                     canvas.toBlob((blob) => {
                         resolve(blob);
-                    }, 'image/jpeg', 0.7); // Compress to 70% quality JPEG
+                    }, 'image/jpeg', 0.7);
                 };
             };
         });
     };
 
-    const uploadImage = async (file) => {
+    const handleUpload = async (files) => {
+        setUploading(true);
+        const newImages = [];
         try {
-            setUploading(true);
-            const compressedBlob = await compressImage(file);
-            const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+            for (const file of Array.from(files)) {
+                const compressedBlob = await compressImage(file);
+                const fileName = `flight_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+                const { error } = await supabase.storage
+                    .from('images')
+                    .upload(fileName, compressedBlob);
+                if (error) throw error;
+                newImages.push(fileName);
+            }
 
-            const { data, error } = await supabase.storage
-                .from('images') // Assumes bucket 'images' exists
-                .upload(fileName, compressedBlob);
-
-            if (error) throw error;
-
-            // Set formData.img_url to the fileName (path)
-            setFormData(prev => ({ ...prev, img_url: fileName }));
+            setFormData(prev => ({
+                ...prev,
+                img_urls: [...prev.img_urls, ...newImages]
+            }));
         } catch (err) {
-            alert("圖片上傳失敗 (請確認 Supabase StorageBucket 'images' 已建立並開啟公開寫入): " + err.message);
+            alert("圖片上傳失敗: " + err.message);
         } finally {
             setUploading(false);
         }
     };
 
-    const handleFileChange = (e) => {
-        if (e.target.files && e.target.files[0]) {
-            uploadImage(e.target.files[0]);
+    const handleModalSubmit = async (data) => {
+        if (!data.title) return;
+        setIsSubmitting(true);
+
+        try {
+            const payload = {
+                title: data.title,
+                content: data.content,
+                img_urls: data.img_urls,
+                img_url: data.img_urls.length > 0 ? data.img_urls[0] : null
+            };
+
+            if (editingId) {
+                const { error } = await supabase
+                    .from('flight_info')
+                    .update(payload)
+                    .eq('id', editingId);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase
+                    .from('flight_info')
+                    .insert(payload);
+                if (error) throw error;
+            }
+
+            handleCloseModal();
+            fetchFlights();
+        } catch (err) {
+            alert(editingId ? "更新失敗: " + err.message : "新增失敗: " + err.message);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
-    const handlePaste = (e) => {
-        const items = e.clipboardData.items;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf('image') !== -1) {
-                const blob = items[i].getAsFile();
-                uploadImage(blob);
-                e.preventDefault(); // Prevent default paste behavior if image
-            }
+    const handleEdit = (item) => {
+        setEditingId(item.id);
+
+        let images = [];
+        if (item.img_urls && Array.isArray(item.img_urls)) {
+            images = item.img_urls;
+        } else if (item.img_url) {
+            images = [item.img_url];
         }
+
+        setFormData({
+            title: item.title,
+            content: item.content || '',
+            img_urls: images
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = async (id = null) => {
+        const targetId = id || editingId;
+        if (!targetId) return;
+        if (!confirm("確定要刪除這筆資料嗎？")) return;
+
+        try {
+            await supabase.from('flight_info').delete().eq('id', targetId);
+            if (editingId) handleCloseModal();
+            fetchFlights();
+        } catch (err) {
+            alert("刪除失敗");
+        }
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setEditingId(null);
+        setFormData({ title: '', content: '', img_urls: [] });
     };
 
     return (
@@ -250,122 +248,65 @@ export default function FlightsPage() {
                             請按右下角 <b>+</b> 新增，記錄航班時間，或直接貼上/上傳機票截圖！
                         </div>
                     ) : (
-                        flights.map(item => (
-                            <div key={item.id} className={styles.card}>
-                                <div className={styles.cardTop}>
-                                    <div className={styles.cardTitle}>
-                                        <Plane size={18} />
-                                        {item.title}
+                        flights.map(item => {
+                            // Display logic for images in card
+                            let coverImage = null;
+                            if (item.img_urls && item.img_urls.length > 0) coverImage = item.img_urls[0];
+                            else if (item.img_url) coverImage = item.img_url;
+
+                            return (
+                                <div key={item.id} className={styles.card} onClick={() => handleEdit(item)}>
+                                    <div className={styles.cardTop}>
+                                        <div className={styles.cardTitle}>
+                                            <Plane size={18} />
+                                            {item.title}
+                                        </div>
                                     </div>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <button className={styles.editBtn} onClick={() => handleEdit(item)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '4px' }}>
-                                            <Pencil size={16} />
-                                        </button>
-                                        <button className={styles.deleteBtn} onClick={() => handleDelete(item.id)}>
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
+
+                                    {item.content && (
+                                        <div className={styles.cardContent}>
+                                            {item.content}
+                                        </div>
+                                    )}
+
+                                    {coverImage && (
+                                        <div className={styles.cardImage}>
+                                            <SecureImage path={coverImage} alt="Flight Info" />
+                                            {item.img_urls && item.img_urls.length > 1 && (
+                                                <div style={{
+                                                    position: 'absolute', bottom: 8, right: 8,
+                                                    background: 'rgba(0,0,0,0.6)', color: 'white',
+                                                    fontSize: '0.7rem', padding: '2px 6px',
+                                                    borderRadius: '4px'
+                                                }}>
+                                                    +{item.img_urls.length - 1}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-
-                                {item.content && (
-                                    <div className={styles.cardContent}>
-                                        {item.content}
-                                    </div>
-                                )}
-
-                                {item.img_url && (
-                                    <div className={styles.cardImage}>
-                                        <SecureImage path={item.img_url} alt="Flight Info" />
-                                    </div>
-                                )}
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             )}
 
-            <button className={styles.fab} onClick={() => { setEditingId(null); setFormData({ title: '', content: '', img_url: '' }); setIsModalOpen(true); }}>
+            <button className={styles.fab} onClick={() => { setEditingId(null); setFormData({ title: '', content: '', img_urls: [] }); setIsModalOpen(true); }}>
                 <Plus size={32} />
             </button>
 
-            {isModalOpen && (
-                <div className={styles.modalOverlay} onClick={handleCloseModal}>
-                    <div
-                        className={styles.modalContent}
-                        onClick={e => e.stopPropagation()}
-                        onPaste={handlePaste} // Enable paste on the whole modal
-                    >
-                        <h3 className={styles.modalTitle}>{editingId ? '編輯機票/航班資訊' : '新增機票/航班資訊'}</h3>
-                        <form onSubmit={handleAdd} className={styles.modalForm}>
-                            <div className={styles.scrollableContent}>
-                                <div className={styles.inputGroup}>
-                                    <label>標題</label>
-                                    <input
-                                        className={styles.input}
-                                        value={formData.title}
-                                        onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                        placeholder="例如: 去程航班 IT232"
-                                        required
-                                        autoFocus
-                                    />
-                                </div>
-                                <div className={styles.inputGroup}>
-                                    <label>詳細內容</label>
-                                    <textarea
-                                        className={styles.textarea}
-                                        value={formData.content}
-                                        onChange={e => setFormData({ ...formData, content: e.target.value })}
-                                        placeholder="可以直接貼上航班資訊文字..."
-                                    />
-                                </div>
-                                <div className={styles.inputGroup}>
-                                    <label>圖片 (截圖/照片)</label>
-
-                                    {/* Image Upload Area */}
-                                    <div style={{ marginBottom: '0.5rem' }}>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handleFileChange}
-                                            style={{ fontSize: '0.9rem' }}
-                                            disabled={uploading}
-                                        />
-                                        <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>
-                                            💡 手機可直接拍照上傳，電腦可直接 Ctrl+V 貼上截圖。
-                                        </p>
-                                    </div>
-
-                                    {/* URL Input (Manual or Auto-filled) - Hidden unless has value */}
-                                    {formData.img_url && (
-                                        <input
-                                            className={styles.input}
-                                            value={formData.img_url}
-                                            onChange={e => setFormData({ ...formData, img_url: e.target.value })}
-                                            placeholder="圖片 ID..."
-                                            readOnly={true}
-                                            style={{ fontSize: '0.8rem', color: '#666', background: '#f5f5f5', marginBottom: '0.5rem' }}
-                                        />
-                                    )}
-                                    {uploading && <div style={{ fontSize: '0.8rem', color: 'var(--primary)', marginTop: '4px' }}>正在壓縮並上傳中...</div>}
-
-                                    {formData.img_url && !uploading && (
-                                        <div style={{ marginTop: '0.5rem', height: '150px', borderRadius: '4px', overflow: 'hidden' }}>
-                                            <SecureImage path={formData.img_url} alt="Preview" />
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className={styles.modalActions}>
-                                <button type="button" className={styles.cancelBtn} onClick={handleCloseModal}>取消</button>
-                                <button type="submit" className={styles.submitBtn} disabled={isSubmitting || uploading}>
-                                    {isSubmitting ? '儲存中...' : '儲存'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <UniversalModal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+                title={editingId ? '編輯機票/航班資訊' : '新增機票/航班資訊'}
+                initialData={formData}
+                onSubmit={handleModalSubmit}
+                uploading={uploading}
+                onUpload={handleUpload}
+                isSubmitting={isSubmitting}
+                showDelete={!!editingId}
+                onDelete={() => handleDelete(editingId)}
+            />
         </div>
     );
 }
