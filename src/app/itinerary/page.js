@@ -869,6 +869,20 @@ function ItineraryContent() {
                                 {selectedLoc.details && <div className={styles.modalDesc}><p>{linkifyText(selectedLoc.details)}</p></div>}
                                 {selectedLoc.address && <div className={styles.modalAddress}><MapPin size={16} /> <span>{selectedLoc.address}</span></div>}
 
+                                {selectedLoc.attachments && selectedLoc.attachments.length > 0 && (
+                                    <div className={styles.modalAttachments}>
+                                        <h4>相關文件 (PDF/照片)</h4>
+                                        <div className={styles.attachmentList}>
+                                            {selectedLoc.attachments.map(att => (
+                                                <a key={att.id} href={att.url} target="_blank" rel="noopener noreferrer" className={styles.attachmentItem}>
+                                                    <FileText size={16} />
+                                                    <span>{att.name || '未命名文件'}</span>
+                                                </a>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className={styles.modalActions}>
                                     {selectedLoc.address && (
                                         <>

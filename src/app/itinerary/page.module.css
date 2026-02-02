@@ -815,3 +815,43 @@
 .legendDotEnd {
     background: #ef4444;
 }
+/* Attachments */
+.modalAttachments {
+    margin-bottom: 2rem;
+    padding: 0;
+}
+
+.modalAttachments h4 {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.8rem;
+    font-weight: 600;
+}
+
+.attachmentList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.attachmentItem {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.8rem 1rem;
+    background: #f8f8f8;
+    border: 1px solid #eee;
+    text-decoration: none;
+    color: var(--color-ink);
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.attachmentItem:hover {
+    background: #f0f0f0;
+    border-color: #ddd;
+    color: var(--primary);
+}
+
