@@ -42,7 +42,7 @@ export default function FlightsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const [selectedGroupId, setSelectedGroupId] = useState(null); // For adding new entry to a group
+    const [selectedGroupIds, setSelectedGroupIds] = useState([]); // Array for multi-select
     const [viewingFlight, setViewingFlight] = useState(null);
     const [expandedGroup, setExpandedGroup] = useState(null);
 
@@ -51,7 +51,7 @@ export default function FlightsPage() {
         title: '',
         content: '',
         img_urls: [],
-        group_id: null
+        group_ids: []
     });
 
     // Construct groups from families (same logic as AnalysisDashboard)
@@ -111,14 +111,20 @@ export default function FlightsPage() {
         }
     };
 
-    // Group flights by group_id
+    // Group flights by group_ids (an entry can appear in multiple groups)
     const flightsByGroup = useMemo(() => {
         const grouped = {};
         analysisGroups.forEach(g => {
-            grouped[g.id] = flights.filter(f => f.group_id === g.id);
+            grouped[g.id] = flights.filter(f => {
+                const gids = f.group_ids || (f.group_id ? [f.group_id] : []);
+                return gids.includes(g.id);
+            });
         });
-        // Also include ungrouped entries
-        grouped['_ungrouped'] = flights.filter(f => !f.group_id);
+        // Also include ungrouped entries (no group_ids or empty array)
+        grouped['_ungrouped'] = flights.filter(f => {
+            const gids = f.group_ids || (f.group_id ? [f.group_id] : []);
+            return gids.length === 0;
+        });
         return grouped;
     }, [flights, analysisGroups]);
 
@@ -195,7 +201,7 @@ export default function FlightsPage() {
                 content: data.content,
                 img_urls: finalImgUrls,
                 img_url: finalImgUrls.length > 0 ? finalImgUrls[0] : null,
-                group_id: selectedGroupId || null
+                group_ids: selectedGroupIds || []
             };
 
             if (editingId) {
@@ -227,7 +233,9 @@ export default function FlightsPage() {
     const handleEdit = (item = null, groupId = null) => {
         if (item) {
             setEditingId(item.id);
-            setSelectedGroupId(item.group_id || null);
+            // Handle both legacy group_id and new group_ids
+            const gids = item.group_ids || (item.group_id ? [item.group_id] : []);
+            setSelectedGroupIds(gids);
 
             let images = [];
             if (item.img_urls && Array.isArray(item.img_urls)) {
@@ -240,14 +248,14 @@ export default function FlightsPage() {
                 title: item.title,
                 content: item.content || '',
                 img_urls: images,
-                group_id: item.group_id || null
+                group_ids: gids
             });
             setIsModalOpen(true);
         } else {
             // New entry
             setEditingId(null);
-            setSelectedGroupId(groupId);
-            setFormData({ title: '', content: '', img_urls: [], group_id: groupId });
+            setSelectedGroupIds(groupId ? [groupId] : []);
+            setFormData({ title: '', content: '', img_urls: [], group_ids: groupId ? [groupId] : [] });
             setIsModalOpen(true);
         }
         if (viewingFlight) setViewingFlight(null);
@@ -281,8 +289,8 @@ export default function FlightsPage() {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setEditingId(null);
-        setSelectedGroupId(null);
-        setFormData({ title: '', content: '', img_urls: [], group_id: null });
+        setSelectedGroupIds([]);
+        setFormData({ title: '', content: '', img_urls: [], group_ids: [] });
     };
 
     const toggleGroup = (groupId) => {
@@ -640,8 +648,8 @@ export default function FlightsPage() {
                 showDelete={!!editingId}
                 onDelete={() => handleDelete(editingId)}
                 groupOptions={analysisGroups}
-                selectedGroupId={selectedGroupId}
-                onGroupChange={setSelectedGroupId}
+                selectedGroupId={selectedGroupIds}
+                onGroupChange={setSelectedGroupIds}
             />
         </div>
     );

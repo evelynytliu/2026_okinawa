@@ -171,32 +171,59 @@ export default function UniversalModal({
                     gap: '1.5rem',
                     WebkitOverflowScrolling: 'touch'
                 }}>
-                    {/* Group Selector (Optional) */}
+                    {/* Group Selector (Optional) - Tag Style Multi-Select */}
                     {groupOptions && groupOptions.length > 0 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Users size={16} /> 所屬群組
+                                <Users size={16} /> 所屬群組 (可複選)
                             </label>
-                            <select
-                                value={selectedGroupId || ''}
-                                onChange={(e) => onGroupChange && onGroupChange(e.target.value || null)}
-                                style={{
-                                    padding: '0.75rem 1rem',
-                                    border: '1px solid #e2e8f0',
-                                    borderRadius: '8px',
-                                    fontSize: '1rem',
-                                    width: '100%',
-                                    background: 'white',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                <option value="">-- 選擇群組 --</option>
-                                {groupOptions.map(g => (
-                                    <option key={g.id} value={g.id} style={{ color: g.color }}>
-                                        {g.name}
-                                    </option>
-                                ))}
-                            </select>
+                            <div style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: '0.5rem',
+                                padding: '0.5rem',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '8px',
+                                background: '#f8fafc',
+                                minHeight: '48px'
+                            }}>
+                                {groupOptions.map(g => {
+                                    const isSelected = Array.isArray(selectedGroupId)
+                                        ? selectedGroupId.includes(g.id)
+                                        : selectedGroupId === g.id;
+                                    return (
+                                        <button
+                                            key={g.id}
+                                            type="button"
+                                            onClick={() => {
+                                                if (onGroupChange) {
+                                                    const currentIds = Array.isArray(selectedGroupId) ? selectedGroupId : (selectedGroupId ? [selectedGroupId] : []);
+                                                    if (isSelected) {
+                                                        // Remove
+                                                        onGroupChange(currentIds.filter(id => id !== g.id));
+                                                    } else {
+                                                        // Add
+                                                        onGroupChange([...currentIds, g.id]);
+                                                    }
+                                                }
+                                            }}
+                                            style={{
+                                                padding: '0.4rem 0.75rem',
+                                                borderRadius: '16px',
+                                                fontSize: '0.85rem',
+                                                fontWeight: 600,
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s',
+                                                border: isSelected ? `2px solid ${g.color}` : '2px solid #e2e8f0',
+                                                background: isSelected ? `${g.color}20` : 'white',
+                                                color: isSelected ? g.color : '#64748b'
+                                            }}
+                                        >
+                                            {g.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
 
