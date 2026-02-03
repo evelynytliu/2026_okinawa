@@ -1,28 +1,86 @@
 
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Plus, Trash2, Plane, Image as ImageIcon, Loader2, Pencil, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Plane, Car, Image as ImageIcon, Loader2, Pencil, X, ChevronRight, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useTrip } from '@/context/TripContext';
 import UniversalModal from '@/components/ui/UniversalModal';
 import SecureImage from '@/components/ui/SecureImage';
 import styles from './page.module.css';
 
+// Utility: Convert URLs in text to clickable links
+const linkifyText = (text) => {
+    if (!text) return null;
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+
+    return parts.map((part, index) => {
+        if (part.match(urlRegex)) {
+            return (
+                <a
+                    key={index}
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#3b82f6', textDecoration: 'underline', wordBreak: 'break-all' }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {part}
+                </a>
+            );
+        }
+        return part;
+    });
+};
+
 export default function FlightsPage() {
     const router = useRouter();
+    const { members, families } = useTrip();
     const [flights, setFlights] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [uploading, setUploading] = useState(false);
     const [editingId, setEditingId] = useState(null);
+    const [selectedGroupId, setSelectedGroupId] = useState(null); // For adding new entry to a group
+    const [viewingFlight, setViewingFlight] = useState(null);
+    const [expandedGroup, setExpandedGroup] = useState(null);
 
     // Form
     const [formData, setFormData] = useState({
         title: '',
         content: '',
-        img_urls: []
+        img_urls: [],
+        group_id: null
     });
+
+    // Construct groups from families (same logic as AnalysisDashboard)
+    const analysisGroups = useMemo(() => {
+        let groups = [];
+        families.forEach(f => {
+            if (f.id === 'individuals') {
+                // Break down individuals into single-person groups
+                f.members.forEach(mid => {
+                    const mName = members[mid]?.name || mid;
+                    groups.push({
+                        id: 'g_' + mid,
+                        name: mName,
+                        members: [mid],
+                        color: f.color
+                    });
+                });
+            } else {
+                // Keep families as whole groups
+                groups.push({
+                    id: f.id,
+                    name: f.name,
+                    members: f.members,
+                    color: f.color
+                });
+            }
+        });
+        return groups;
+    }, [families, members]);
 
     useEffect(() => {
         fetchFlights();
@@ -44,6 +102,17 @@ export default function FlightsPage() {
             setLoading(false);
         }
     };
+
+    // Group flights by group_id
+    const flightsByGroup = useMemo(() => {
+        const grouped = {};
+        analysisGroups.forEach(g => {
+            grouped[g.id] = flights.filter(f => f.group_id === g.id);
+        });
+        // Also include ungrouped entries
+        grouped['_ungrouped'] = flights.filter(f => !f.group_id);
+        return grouped;
+    }, [flights, analysisGroups]);
 
     // --- Image Handling Helpers ---
     const compressImage = (file) => {
@@ -101,7 +170,6 @@ export default function FlightsPage() {
 
             // 2. Identify and Delete Unused Images (only if editing)
             if (editingId) {
-                // Find original object to compare
                 const originalItem = flights.find(f => f.id === editingId);
                 if (originalItem) {
                     const oldUrls = originalItem.img_urls || (originalItem.img_url ? [originalItem.img_url] : []);
@@ -118,7 +186,8 @@ export default function FlightsPage() {
                 title: data.title,
                 content: data.content,
                 img_urls: finalImgUrls,
-                img_url: finalImgUrls.length > 0 ? finalImgUrls[0] : null
+                img_url: finalImgUrls.length > 0 ? finalImgUrls[0] : null,
+                group_id: selectedGroupId || null
             };
 
             if (editingId) {
@@ -143,15 +212,14 @@ export default function FlightsPage() {
         }
     };
 
-    const [viewingFlight, setViewingFlight] = useState(null);
-
     const handleView = (item) => {
         setViewingFlight(item);
     };
 
-    const handleEdit = (item = null) => {
+    const handleEdit = (item = null, groupId = null) => {
         if (item) {
             setEditingId(item.id);
+            setSelectedGroupId(item.group_id || null);
 
             let images = [];
             if (item.img_urls && Array.isArray(item.img_urls)) {
@@ -163,13 +231,15 @@ export default function FlightsPage() {
             setFormData({
                 title: item.title,
                 content: item.content || '',
-                img_urls: images
+                img_urls: images,
+                group_id: item.group_id || null
             });
             setIsModalOpen(true);
         } else {
-            // New
+            // New entry
             setEditingId(null);
-            setFormData({ title: '', content: '', img_urls: [] });
+            setSelectedGroupId(groupId);
+            setFormData({ title: '', content: '', img_urls: [], group_id: groupId });
             setIsModalOpen(true);
         }
         if (viewingFlight) setViewingFlight(null);
@@ -178,7 +248,6 @@ export default function FlightsPage() {
     const handleDeleteClick = async (item) => {
         if (confirm("確定要刪除這筆資料嗎？")) {
             try {
-                // Delete images first
                 const urlsToDelete = item.img_urls || (item.img_url ? [item.img_url] : []);
                 if (urlsToDelete.length > 0) {
                     await supabase.storage.from('images').remove(urlsToDelete);
@@ -194,7 +263,6 @@ export default function FlightsPage() {
     };
 
     const handleDelete = async (id = null) => {
-        // Keep for compatibility if called from UniversalModal
         const targetId = id || editingId;
         if (!targetId) return;
         const item = flights.find(f => f.id === targetId);
@@ -205,7 +273,12 @@ export default function FlightsPage() {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setEditingId(null);
-        setFormData({ title: '', content: '', img_urls: [] });
+        setSelectedGroupId(null);
+        setFormData({ title: '', content: '', img_urls: [], group_id: null });
+    };
+
+    const toggleGroup = (groupId) => {
+        setExpandedGroup(expandedGroup === groupId ? null : groupId);
     };
 
     return (
@@ -214,65 +287,246 @@ export default function FlightsPage() {
                 <button onClick={() => router.push('/')} className={styles.backBtn}>
                     <ArrowLeft size={24} />
                 </button>
-                <h2><Plane size={24} className="fly-icon" /> 機票資訊</h2>
+                <h2><Plane size={24} className="fly-icon" /> 班機/交通資訊</h2>
             </header>
 
             {loading ? (
                 <div style={{ textAlign: 'center', marginTop: '2rem' }}><Loader2 className="spin" /> 載入中...</div>
             ) : (
-                <div className={styles.infoCards}>
-                    {flights.length === 0 ? (
-                        <div className={styles.emptyState}>
-                            目前沒有機票資料。<br />
-                            請按右下角 <b>+</b> 新增，記錄航班時間，或直接貼上/上傳機票截圖！
-                        </div>
-                    ) : (
-                        flights.map(item => {
-                            // Display logic for images in card
-                            let coverImage = null;
-                            if (item.img_urls && item.img_urls.length > 0) coverImage = item.img_urls[0];
-                            else if (item.img_url) coverImage = item.img_url;
+                <div style={{ padding: '1rem' }}>
+                    {/* Group Cards */}
+                    <div style={{ display: 'grid', gap: '1rem' }}>
+                        {analysisGroups.map(group => {
+                            const groupFlights = flightsByGroup[group.id] || [];
+                            const isExpanded = expandedGroup === group.id;
 
                             return (
-                                <div key={item.id} className={styles.card} onClick={() => handleView(item)}>
-                                    <div className={styles.cardTop}>
-                                        <div className={styles.cardTitle}>
-                                            <Plane size={18} />
-                                            {item.title}
+                                <div key={group.id} style={{
+                                    background: 'white',
+                                    borderRadius: '16px',
+                                    overflow: 'hidden',
+                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                                    border: `3px solid ${group.color}20`
+                                }}>
+                                    {/* Group Header */}
+                                    <div
+                                        onClick={() => toggleGroup(group.id)}
+                                        style={{
+                                            padding: '1rem',
+                                            background: `linear-gradient(135deg, ${group.color}15, ${group.color}05)`,
+                                            borderLeft: `4px solid ${group.color}`,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <Users size={20} style={{ color: group.color }} />
+                                            <span style={{ fontWeight: 700, fontSize: '1.1rem', color: '#1e293b' }}>{group.name}</span>
+                                            <span style={{
+                                                background: group.color,
+                                                color: 'white',
+                                                fontSize: '0.75rem',
+                                                padding: '2px 8px',
+                                                borderRadius: '12px',
+                                                fontWeight: 600
+                                            }}>{groupFlights.length} 筆</span>
                                         </div>
+                                        <ChevronRight
+                                            size={20}
+                                            style={{
+                                                color: '#94a3b8',
+                                                transition: 'transform 0.2s',
+                                                transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'
+                                            }}
+                                        />
                                     </div>
 
-                                    {item.content && (
-                                        <div className={styles.cardContent}>
-                                            {item.content}
-                                        </div>
-                                    )}
-
-                                    {coverImage && (
-                                        <div className={styles.cardImage}>
-                                            <SecureImage path={coverImage} alt="Flight Info" style={{ pointerEvents: 'none', width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            {item.img_urls && item.img_urls.length > 1 && (
+                                    {/* Expanded Content */}
+                                    {isExpanded && (
+                                        <div style={{ padding: '1rem', background: '#fafafa' }}>
+                                            {groupFlights.length === 0 ? (
                                                 <div style={{
-                                                    position: 'absolute', bottom: 8, right: 8,
-                                                    background: 'rgba(0,0,0,0.6)', color: 'white',
-                                                    fontSize: '0.7rem', padding: '2px 6px',
-                                                    borderRadius: '4px'
+                                                    textAlign: 'center',
+                                                    color: '#94a3b8',
+                                                    padding: '2rem',
+                                                    fontSize: '0.9rem'
                                                 }}>
-                                                    +{item.img_urls.length - 1}
+                                                    尚無資料，點擊下方按鈕新增
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                                    {groupFlights.map(item => {
+                                                        let coverImage = null;
+                                                        if (item.img_urls && item.img_urls.length > 0) coverImage = item.img_urls[0];
+                                                        else if (item.img_url) coverImage = item.img_url;
+
+                                                        return (
+                                                            <div
+                                                                key={item.id}
+                                                                onClick={() => handleView(item)}
+                                                                style={{
+                                                                    background: 'white',
+                                                                    borderRadius: '12px',
+                                                                    padding: '1rem',
+                                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                                                    cursor: 'pointer',
+                                                                    display: 'flex',
+                                                                    gap: '1rem',
+                                                                    alignItems: 'flex-start',
+                                                                    transition: 'transform 0.2s'
+                                                                }}
+                                                            >
+                                                                {coverImage && (
+                                                                    <div style={{
+                                                                        width: '80px',
+                                                                        height: '80px',
+                                                                        borderRadius: '8px',
+                                                                        overflow: 'hidden',
+                                                                        flexShrink: 0
+                                                                    }}>
+                                                                        <SecureImage path={coverImage} alt={item.title} style={{
+                                                                            width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none'
+                                                                        }} />
+                                                                    </div>
+                                                                )}
+                                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                                    <div style={{
+                                                                        fontWeight: 600,
+                                                                        fontSize: '1rem',
+                                                                        color: '#1e293b',
+                                                                        marginBottom: '0.25rem',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '0.5rem'
+                                                                    }}>
+                                                                        <Plane size={16} style={{ color: group.color }} />
+                                                                        {item.title}
+                                                                    </div>
+                                                                    {item.content && (
+                                                                        <div style={{
+                                                                            fontSize: '0.85rem',
+                                                                            color: '#64748b',
+                                                                            overflow: 'hidden',
+                                                                            textOverflow: 'ellipsis',
+                                                                            display: '-webkit-box',
+                                                                            WebkitLineClamp: 2,
+                                                                            WebkitBoxOrient: 'vertical'
+                                                                        }}>
+                                                                            {item.content}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
+
+                                            {/* Add Button for this group */}
+                                            <button
+                                                onClick={() => handleEdit(null, group.id)}
+                                                style={{
+                                                    marginTop: '1rem',
+                                                    width: '100%',
+                                                    padding: '0.75rem',
+                                                    background: `${group.color}15`,
+                                                    border: `2px dashed ${group.color}50`,
+                                                    borderRadius: '12px',
+                                                    color: group.color,
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '0.5rem',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                <Plus size={18} />
+                                                新增 {group.name} 的資訊
+                                            </button>
                                         </div>
                                     )}
                                 </div>
                             );
-                        })
-                    )}
+                        })}
+
+                        {/* Ungrouped entries (if any) */}
+                        {flightsByGroup['_ungrouped']?.length > 0 && (
+                            <div style={{
+                                background: 'white',
+                                borderRadius: '16px',
+                                overflow: 'hidden',
+                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                                border: '3px solid #e2e8f020'
+                            }}>
+                                <div
+                                    onClick={() => toggleGroup('_ungrouped')}
+                                    style={{
+                                        padding: '1rem',
+                                        background: '#f8fafc',
+                                        borderLeft: '4px solid #94a3b8',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <Plane size={20} style={{ color: '#94a3b8' }} />
+                                        <span style={{ fontWeight: 700, fontSize: '1.1rem', color: '#64748b' }}>未分類</span>
+                                        <span style={{
+                                            background: '#94a3b8',
+                                            color: 'white',
+                                            fontSize: '0.75rem',
+                                            padding: '2px 8px',
+                                            borderRadius: '12px',
+                                            fontWeight: 600
+                                        }}>{flightsByGroup['_ungrouped'].length} 筆</span>
+                                    </div>
+                                    <ChevronRight
+                                        size={20}
+                                        style={{
+                                            color: '#94a3b8',
+                                            transition: 'transform 0.2s',
+                                            transform: expandedGroup === '_ungrouped' ? 'rotate(90deg)' : 'rotate(0deg)'
+                                        }}
+                                    />
+                                </div>
+
+                                {expandedGroup === '_ungrouped' && (
+                                    <div style={{ padding: '1rem', background: '#fafafa' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                            {flightsByGroup['_ungrouped'].map(item => (
+                                                <div
+                                                    key={item.id}
+                                                    onClick={() => handleView(item)}
+                                                    style={{
+                                                        background: 'white',
+                                                        borderRadius: '12px',
+                                                        padding: '1rem',
+                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.title}</div>
+                                                    {item.content && (
+                                                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem' }}>
+                                                            {item.content.substring(0, 100)}...
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
-
-            <button className={styles.fab} onClick={() => handleEdit(null)}>
-                <Plus size={32} />
-            </button>
 
             {/* View Modal */}
             {viewingFlight && (
@@ -358,9 +612,9 @@ export default function FlightsPage() {
                                 fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem', color: '#1e293b'
                             }}>{viewingFlight.title}</h3>
                             <div style={{
-                                fontSize: '1rem', lineHeight: '1.6', color: '#334155', whiteSpace: 'pre-wrap'
+                                fontSize: '1rem', lineHeight: '1.8', color: '#334155', whiteSpace: 'pre-wrap'
                             }}>
-                                {viewingFlight.content}
+                                {linkifyText(viewingFlight.content)}
                             </div>
                         </div>
 
@@ -368,14 +622,10 @@ export default function FlightsPage() {
                 </div>
             )}
 
-            <button className={styles.fab} onClick={() => handleEdit(null)}>
-                <Plus size={32} />
-            </button>
-
             <UniversalModal
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}
-                title={editingId ? '編輯機票/航班資訊' : '新增機票/航班資訊'}
+                title={editingId ? '編輯資訊' : '新增資訊'}
                 initialData={formData}
                 onSubmit={handleModalSubmit}
                 isSubmitting={isSubmitting}
