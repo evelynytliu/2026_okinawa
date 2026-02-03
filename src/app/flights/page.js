@@ -631,6 +631,9 @@ export default function FlightsPage() {
                 isSubmitting={isSubmitting}
                 showDelete={!!editingId}
                 onDelete={() => handleDelete(editingId)}
+                groupOptions={analysisGroups}
+                selectedGroupId={selectedGroupId}
+                onGroupChange={setSelectedGroupId}
             />
         </div>
     );

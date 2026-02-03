@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { X, Trash2, Image as ImageIcon, Loader2, Users } from 'lucide-react';
 import SecureImage from './SecureImage';
 
 // A reusable Modal for editing content with Title, Content, and Multiple Images
@@ -11,7 +11,11 @@ export default function UniversalModal({
     onSubmit,
     isSubmitting = false,
     onDelete,
-    showDelete = false
+    showDelete = false,
+    // Optional: Group selection
+    groupOptions = null,  // Array of { id, name, color }
+    selectedGroupId = null,
+    onGroupChange = null
 }) {
     const [formData, setFormData] = useState({
         title: '',
@@ -167,6 +171,35 @@ export default function UniversalModal({
                     gap: '1.5rem',
                     WebkitOverflowScrolling: 'touch'
                 }}>
+                    {/* Group Selector (Optional) */}
+                    {groupOptions && groupOptions.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Users size={16} /> 所屬群組
+                            </label>
+                            <select
+                                value={selectedGroupId || ''}
+                                onChange={(e) => onGroupChange && onGroupChange(e.target.value || null)}
+                                style={{
+                                    padding: '0.75rem 1rem',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '8px',
+                                    fontSize: '1rem',
+                                    width: '100%',
+                                    background: 'white',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <option value="">-- 選擇群組 --</option>
+                                {groupOptions.map(g => (
+                                    <option key={g.id} value={g.id} style={{ color: g.color }}>
+                                        {g.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
                     {/* Title */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#475569' }}>標題</label>
