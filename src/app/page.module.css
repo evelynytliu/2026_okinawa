@@ -120,12 +120,13 @@
 
 .flightBadge {
   background: var(--color-sea-light);
-  padding: 0.8rem;
-  border-radius: 50%;
+  padding: 0.6rem 0.8rem;
+  border-radius: 20px;
   color: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 0.4rem;
 }
 
 /* Featured Visual */

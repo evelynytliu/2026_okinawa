@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic';
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plane, Calendar, CreditCard, Plus, PieChart, Hotel, Wallet, Sparkles, ClipboardList, MapPin, X, Utensils, Heart, Trash2, Edit, Loader2, Search } from 'lucide-react';
+import { Plane, Car, Calendar, CreditCard, Plus, PieChart, Hotel, Wallet, Sparkles, ClipboardList, MapPin, X, Utensils, Heart, Trash2, Edit, Loader2, Search } from 'lucide-react';
 import { TRIP_DETAILS, LOCATION_DETAILS } from '@/lib/data';
 import { fetchPlaceDetails } from '@/lib/gemini';
 import { supabase } from '@/lib/supabase';
@@ -380,8 +380,17 @@ export default function Dashboard() {
           <span className={styles.daysBig}>{daysLeft}</span>
           <span className={styles.daysLabel}>DAYS TO GO</span>
         </div>
-        <div className={styles.flightBadge}>
-          <Plane size={24} style={{ transform: 'rotate(-45deg)' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+          <div className={styles.flightBadge}>
+            <Plane size={20} style={{ transform: 'rotate(-45deg)' }} />
+            <Car size={20} />
+          </div>
+          <span style={{
+            fontSize: '0.7rem',
+            color: '#64748b',
+            fontWeight: 600,
+            letterSpacing: '0.5px'
+          }}>交通資訊</span>
         </div>
       </Link>
 
