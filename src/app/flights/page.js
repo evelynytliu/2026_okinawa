@@ -56,7 +56,15 @@ export default function FlightsPage() {
 
     // Construct groups from families (same logic as AnalysisDashboard)
     const analysisGroups = useMemo(() => {
-        let groups = [];
+        let groups = [
+            // Add "General" group for shared info at the top
+            {
+                id: '_general',
+                name: '一般 (共用)',
+                members: [],
+                color: '#6366f1' // Indigo color
+            }
+        ];
         families.forEach(f => {
             if (f.id === 'individuals') {
                 // Break down individuals into single-person groups
