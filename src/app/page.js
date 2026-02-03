@@ -129,6 +129,7 @@ const RECOMMENDED_RESTAURANTS = [
 export default function Dashboard() {
   const router = useRouter();
   const [daysLeft, setDaysLeft] = useState(0);
+  const [tripState, setTripState] = useState('before'); // 'before' | 'during' | 'after'
   const [featuredSpot, setFeaturedSpot] = useState(null);
   const [selectedRest, setSelectedRest] = useState(null);
   const scrollRefs = useRef({});
@@ -283,12 +284,34 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    // 1. Calculate Days Left
+    // 1. Calculate Trip State & Days
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to midnight
+
     const start = new Date(TRIP_DETAILS.dates.start);
-    const diffTime = start - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    setDaysLeft(diffDays > 0 ? diffDays : 0);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(TRIP_DETAILS.dates.end);
+    end.setHours(0, 0, 0, 0);
+
+    const msPerDay = 1000 * 60 * 60 * 24;
+
+    if (today < start) {
+      // Before trip: countdown
+      const diffDays = Math.ceil((start - today) / msPerDay);
+      setDaysLeft(diffDays);
+      setTripState('before');
+    } else if (today >= start && today <= end) {
+      // During trip: day X
+      const dayNum = Math.floor((today - start) / msPerDay) + 1;
+      setDaysLeft(dayNum);
+      setTripState('during');
+    } else {
+      // After trip: X days ago
+      const daysSince = Math.floor((today - end) / msPerDay);
+      setDaysLeft(daysSince);
+      setTripState('after');
+    }
 
     // 2. Randomly select a featured spot (DB -> Static Fallback)
     const fetchFeatured = async () => {
@@ -375,22 +398,155 @@ export default function Dashboard() {
         </p>
       </header>
 
-      <Link href="/flights" className={`${styles.heroCard} fade-in`}>
+      {/* Countdown Timer Card */}
+      <div className={`${styles.heroCard} fade-in`} style={{ cursor: 'default' }}>
         <div className={styles.countdownBlock}>
           <span className={styles.daysBig}>{daysLeft}</span>
-          <span className={styles.daysLabel}>DAYS TO GO</span>
+          <span className={styles.daysLabel}>
+            {tripState === 'before' && 'DAYS TO GO'}
+            {tripState === 'during' && `DAY ${daysLeft} OF TRIP`}
+            {tripState === 'after' && 'DAYS SINCE TRIP'}
+          </span>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
-          <div className={styles.flightBadge}>
-            <Plane size={20} style={{ transform: 'rotate(-45deg)' }} />
-            <Car size={20} />
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: '0.25rem'
+        }}>
+          {tripState === 'before' && (
+            <div style={{
+              background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+              color: 'white',
+              padding: '0.4rem 0.8rem',
+              borderRadius: '12px',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              letterSpacing: '0.5px'
+            }}>
+              ✈️ 即將出發
+            </div>
+          )}
+          {tripState === 'during' && (
+            <div style={{
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: 'white',
+              padding: '0.4rem 0.8rem',
+              borderRadius: '12px',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              animation: 'pulse 2s infinite'
+            }}>
+              🌴 旅途進行中
+            </div>
+          )}
+          {tripState === 'after' && (
+            <div style={{
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+              color: 'white',
+              padding: '0.4rem 0.8rem',
+              borderRadius: '12px',
+              fontSize: '0.75rem',
+              fontWeight: 700
+            }}>
+              📸 美好回憶
+            </div>
+          )}
+          <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
+            {TRIP_DETAILS.dates.start.replace(/-/g, '.')} ~ {TRIP_DETAILS.dates.end.replace(/-/g, '.')}
+          </span>
+        </div>
+      </div>
+
+      {/* Transportation Info Card - Premium Design */}
+      <Link href="/flights" className="fade-in" style={{ textDecoration: 'none' }}>
+        <div style={{
+          background: 'linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%)',
+          borderRadius: '16px',
+          padding: '1.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.3)',
+          position: 'relative',
+          overflow: 'hidden',
+          transition: 'transform 0.3s, box-shadow 0.3s'
+        }}>
+          {/* Decorative elements */}
+          <div style={{
+            position: 'absolute',
+            top: '-20px',
+            right: '-20px',
+            width: '100px',
+            height: '100px',
+            background: 'radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%)',
+            borderRadius: '50%'
+          }} />
+          <div style={{
+            position: 'absolute',
+            bottom: '-30px',
+            left: '30%',
+            width: '80px',
+            height: '80px',
+            background: 'radial-gradient(circle, rgba(236,72,153,0.2) 0%, transparent 70%)',
+            borderRadius: '50%'
+          }} />
+
+          {/* Left: Icons */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            position: 'relative',
+            zIndex: 1
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              background: 'rgba(255,255,255,0.15)',
+              backdropFilter: 'blur(10px)',
+              padding: '0.6rem 0.8rem',
+              borderRadius: '12px'
+            }}>
+              <Plane size={22} style={{ color: '#60a5fa', transform: 'rotate(-45deg)' }} />
+              <Car size={22} style={{ color: '#34d399' }} />
+            </div>
+            <div>
+              <div style={{
+                color: 'white',
+                fontWeight: 700,
+                fontSize: '1.1rem',
+                letterSpacing: '0.5px'
+              }}>
+                交通資訊
+              </div>
+              <div style={{
+                color: 'rgba(255,255,255,0.6)',
+                fontSize: '0.75rem',
+                marginTop: '2px'
+              }}>
+                班機 · 租車 · 接送
+              </div>
+            </div>
           </div>
-          <span style={{
-            fontSize: '0.7rem',
-            color: '#64748b',
-            fontWeight: 600,
-            letterSpacing: '0.5px'
-          }}>交通資訊</span>
+
+          {/* Right: Arrow */}
+          <div style={{
+            background: 'rgba(255,255,255,0.1)',
+            borderRadius: '50%',
+            width: '36px',
+            height: '36px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+            zIndex: 1
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </div>
         </div>
       </Link>
 
