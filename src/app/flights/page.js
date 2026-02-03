@@ -2,7 +2,7 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Plus, Trash2, Plane, Car, Image as ImageIcon, Loader2, Pencil, X, ChevronRight, Users } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Plane, Loader2, Pencil, X, Filter } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTrip } from '@/context/TripContext';
 import UniversalModal from '@/components/ui/UniversalModal';
@@ -42,9 +42,12 @@ export default function FlightsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const [selectedGroupIds, setSelectedGroupIds] = useState([]); // Array for multi-select
+    const [selectedGroupIds, setSelectedGroupIds] = useState([]); // For editing
     const [viewingFlight, setViewingFlight] = useState(null);
-    const [expandedGroup, setExpandedGroup] = useState(null);
+
+    // Filter state
+    const [filterGroupIds, setFilterGroupIds] = useState([]); // Empty = show all
+    const [showFilterPanel, setShowFilterPanel] = useState(false);
 
     // Form
     const [formData, setFormData] = useState({
@@ -54,20 +57,18 @@ export default function FlightsPage() {
         group_ids: []
     });
 
-    // Construct groups from families (same logic as AnalysisDashboard)
+    // Construct groups from families
     const analysisGroups = useMemo(() => {
         let groups = [
-            // Add "General" group for shared info at the top
             {
                 id: '_general',
-                name: '一般 (共用)',
+                name: '共用',
                 members: [],
-                color: '#6366f1' // Indigo color
+                color: '#6366f1'
             }
         ];
         families.forEach(f => {
             if (f.id === 'individuals') {
-                // Break down individuals into single-person groups
                 f.members.forEach(mid => {
                     const mName = members[mid]?.name || mid;
                     groups.push({
@@ -78,7 +79,6 @@ export default function FlightsPage() {
                     });
                 });
             } else {
-                // Keep families as whole groups
                 groups.push({
                     id: f.id,
                     name: f.name,
@@ -89,6 +89,9 @@ export default function FlightsPage() {
         });
         return groups;
     }, [families, members]);
+
+    // Helper: Get group info by id
+    const getGroupById = (id) => analysisGroups.find(g => g.id === id);
 
     useEffect(() => {
         fetchFlights();
@@ -111,22 +114,16 @@ export default function FlightsPage() {
         }
     };
 
-    // Group flights by group_ids (an entry can appear in multiple groups)
-    const flightsByGroup = useMemo(() => {
-        const grouped = {};
-        analysisGroups.forEach(g => {
-            grouped[g.id] = flights.filter(f => {
-                const gids = f.group_ids || (f.group_id ? [f.group_id] : []);
-                return gids.includes(g.id);
-            });
-        });
-        // Also include ungrouped entries (no group_ids or empty array)
-        grouped['_ungrouped'] = flights.filter(f => {
+    // Filter flights based on selected filter tags
+    const filteredFlights = useMemo(() => {
+        if (filterGroupIds.length === 0) return flights; // No filter = show all
+
+        return flights.filter(f => {
             const gids = f.group_ids || (f.group_id ? [f.group_id] : []);
-            return gids.length === 0;
+            // Show if any of the filter tags match
+            return filterGroupIds.some(fid => gids.includes(fid));
         });
-        return grouped;
-    }, [flights, analysisGroups]);
+    }, [flights, filterGroupIds]);
 
     // --- Image Handling Helpers ---
     const compressImage = (file) => {
@@ -163,7 +160,6 @@ export default function FlightsPage() {
         try {
             const finalImgUrls = [];
 
-            // 1. Upload new blobs
             for (const url of data.img_urls) {
                 if (url.startsWith('blob:')) {
                     const file = pendingFiles && pendingFiles[url];
@@ -182,7 +178,6 @@ export default function FlightsPage() {
                 }
             }
 
-            // 2. Identify and Delete Unused Images (only if editing)
             if (editingId) {
                 const originalItem = flights.find(f => f.id === editingId);
                 if (originalItem) {
@@ -195,7 +190,6 @@ export default function FlightsPage() {
                 }
             }
 
-            // 3. Save to DB
             const payload = {
                 title: data.title,
                 content: data.content,
@@ -230,10 +224,9 @@ export default function FlightsPage() {
         setViewingFlight(item);
     };
 
-    const handleEdit = (item = null, groupId = null) => {
+    const handleEdit = (item = null) => {
         if (item) {
             setEditingId(item.id);
-            // Handle both legacy group_id and new group_ids
             const gids = item.group_ids || (item.group_id ? [item.group_id] : []);
             setSelectedGroupIds(gids);
 
@@ -252,10 +245,9 @@ export default function FlightsPage() {
             });
             setIsModalOpen(true);
         } else {
-            // New entry
             setEditingId(null);
-            setSelectedGroupIds(groupId ? [groupId] : []);
-            setFormData({ title: '', content: '', img_urls: [], group_ids: groupId ? [groupId] : [] });
+            setSelectedGroupIds([]);
+            setFormData({ title: '', content: '', img_urls: [], group_ids: [] });
             setIsModalOpen(true);
         }
         if (viewingFlight) setViewingFlight(null);
@@ -293,8 +285,18 @@ export default function FlightsPage() {
         setFormData({ title: '', content: '', img_urls: [], group_ids: [] });
     };
 
-    const toggleGroup = (groupId) => {
-        setExpandedGroup(expandedGroup === groupId ? null : groupId);
+    // Toggle filter tag
+    const toggleFilter = (groupId) => {
+        if (filterGroupIds.includes(groupId)) {
+            setFilterGroupIds(filterGroupIds.filter(id => id !== groupId));
+        } else {
+            setFilterGroupIds([...filterGroupIds, groupId]);
+        }
+    };
+
+    // Clear all filters
+    const clearFilters = () => {
+        setFilterGroupIds([]);
     };
 
     return (
@@ -306,243 +308,266 @@ export default function FlightsPage() {
                 <h2><Plane size={24} className="fly-icon" /> 班機/交通資訊</h2>
             </header>
 
+            {/* Filter Bar */}
+            <div style={{
+                padding: '0.75rem 1rem',
+                background: 'white',
+                borderBottom: '1px solid #e2e8f0',
+                position: 'sticky',
+                top: 0,
+                zIndex: 100
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button
+                        onClick={() => setShowFilterPanel(!showFilterPanel)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: '8px',
+                            border: filterGroupIds.length > 0 ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                            background: filterGroupIds.length > 0 ? '#eff6ff' : 'white',
+                            color: filterGroupIds.length > 0 ? '#3b82f6' : '#64748b',
+                            fontWeight: 600,
+                            fontSize: '0.875rem',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <Filter size={16} />
+                        篩選
+                        {filterGroupIds.length > 0 && (
+                            <span style={{
+                                background: '#3b82f6',
+                                color: 'white',
+                                borderRadius: '10px',
+                                padding: '0 6px',
+                                fontSize: '0.75rem',
+                                marginLeft: '4px'
+                            }}>{filterGroupIds.length}</span>
+                        )}
+                    </button>
+
+                    {/* Show active filter tags */}
+                    {filterGroupIds.map(fid => {
+                        const g = getGroupById(fid);
+                        if (!g) return null;
+                        return (
+                            <span
+                                key={fid}
+                                onClick={() => toggleFilter(fid)}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '0.35rem 0.6rem',
+                                    borderRadius: '14px',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 600,
+                                    background: `${g.color}20`,
+                                    color: g.color,
+                                    border: `1px solid ${g.color}`,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {g.name}
+                                <X size={14} />
+                            </span>
+                        );
+                    })}
+
+                    {filterGroupIds.length > 0 && (
+                        <button
+                            onClick={clearFilters}
+                            style={{
+                                fontSize: '0.8rem',
+                                color: '#94a3b8',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                textDecoration: 'underline'
+                            }}
+                        >
+                            清除全部
+                        </button>
+                    )}
+                </div>
+
+                {/* Filter Panel (expandable) */}
+                {showFilterPanel && (
+                    <div style={{
+                        marginTop: '0.75rem',
+                        padding: '0.75rem',
+                        background: '#f8fafc',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '0.5rem'
+                    }}>
+                        {analysisGroups.map(g => {
+                            const isActive = filterGroupIds.includes(g.id);
+                            return (
+                                <button
+                                    key={g.id}
+                                    onClick={() => toggleFilter(g.id)}
+                                    style={{
+                                        padding: '0.4rem 0.75rem',
+                                        borderRadius: '16px',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s',
+                                        border: isActive ? `2px solid ${g.color}` : '2px solid #e2e8f0',
+                                        background: isActive ? `${g.color}20` : 'white',
+                                        color: isActive ? g.color : '#64748b'
+                                    }}
+                                >
+                                    {g.name}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
             {loading ? (
                 <div style={{ textAlign: 'center', marginTop: '2rem' }}><Loader2 className="spin" /> 載入中...</div>
             ) : (
                 <div style={{ padding: '1rem' }}>
-                    {/* Group Cards */}
-                    <div style={{ display: 'grid', gap: '1rem' }}>
-                        {analysisGroups.map(group => {
-                            const groupFlights = flightsByGroup[group.id] || [];
-                            const isExpanded = expandedGroup === group.id;
+                    {filteredFlights.length === 0 ? (
+                        <div style={{
+                            textAlign: 'center',
+                            color: '#94a3b8',
+                            padding: '3rem 1rem',
+                            background: 'white',
+                            borderRadius: '16px'
+                        }}>
+                            {filterGroupIds.length > 0 ? (
+                                <>找不到符合篩選條件的資料</>
+                            ) : (
+                                <>目前沒有資料。<br />請按右下角 <b>+</b> 新增！</>
+                            )}
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {filteredFlights.map(item => {
+                                const gids = item.group_ids || (item.group_id ? [item.group_id] : []);
+                                let coverImage = null;
+                                if (item.img_urls && item.img_urls.length > 0) coverImage = item.img_urls[0];
+                                else if (item.img_url) coverImage = item.img_url;
 
-                            return (
-                                <div key={group.id} style={{
-                                    background: 'white',
-                                    borderRadius: '16px',
-                                    overflow: 'hidden',
-                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
-                                    border: `3px solid ${group.color}20`
-                                }}>
-                                    {/* Group Header */}
+                                return (
                                     <div
-                                        onClick={() => toggleGroup(group.id)}
+                                        key={item.id}
+                                        onClick={() => handleView(item)}
                                         style={{
-                                            padding: '1rem',
-                                            background: `linear-gradient(135deg, ${group.color}15, ${group.color}05)`,
-                                            borderLeft: `4px solid ${group.color}`,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            cursor: 'pointer'
+                                            background: 'white',
+                                            borderRadius: '16px',
+                                            overflow: 'hidden',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                                            cursor: 'pointer',
+                                            transition: 'transform 0.2s, box-shadow 0.2s'
                                         }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                            <Users size={20} style={{ color: group.color }} />
-                                            <span style={{ fontWeight: 700, fontSize: '1.1rem', color: '#1e293b' }}>{group.name}</span>
-                                            <span style={{
-                                                background: group.color,
-                                                color: 'white',
-                                                fontSize: '0.75rem',
-                                                padding: '2px 8px',
-                                                borderRadius: '12px',
-                                                fontWeight: 600
-                                            }}>{groupFlights.length} 筆</span>
-                                        </div>
-                                        <ChevronRight
-                                            size={20}
-                                            style={{
-                                                color: '#94a3b8',
-                                                transition: 'transform 0.2s',
-                                                transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'
-                                            }}
-                                        />
-                                    </div>
-
-                                    {/* Expanded Content */}
-                                    {isExpanded && (
-                                        <div style={{ padding: '1rem', background: '#fafafa' }}>
-                                            {groupFlights.length === 0 ? (
-                                                <div style={{
-                                                    textAlign: 'center',
-                                                    color: '#94a3b8',
-                                                    padding: '2rem',
-                                                    fontSize: '0.9rem'
-                                                }}>
-                                                    尚無資料，點擊下方按鈕新增
-                                                </div>
-                                            ) : (
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                                    {groupFlights.map(item => {
-                                                        let coverImage = null;
-                                                        if (item.img_urls && item.img_urls.length > 0) coverImage = item.img_urls[0];
-                                                        else if (item.img_url) coverImage = item.img_url;
-
+                                        {/* Card Header with Tags */}
+                                        <div style={{
+                                            padding: '1rem',
+                                            borderBottom: coverImage ? '1px solid #f1f5f9' : 'none'
+                                        }}>
+                                            {/* Group Tags */}
+                                            {gids.length > 0 && (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.5rem' }}>
+                                                    {gids.map(gid => {
+                                                        const g = getGroupById(gid);
+                                                        if (!g) return null;
                                                         return (
-                                                            <div
-                                                                key={item.id}
-                                                                onClick={() => handleView(item)}
+                                                            <span
+                                                                key={gid}
                                                                 style={{
-                                                                    background: 'white',
-                                                                    borderRadius: '12px',
-                                                                    padding: '1rem',
-                                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                                                    cursor: 'pointer',
-                                                                    display: 'flex',
-                                                                    gap: '1rem',
-                                                                    alignItems: 'flex-start',
-                                                                    transition: 'transform 0.2s'
+                                                                    padding: '0.2rem 0.5rem',
+                                                                    borderRadius: '10px',
+                                                                    fontSize: '0.7rem',
+                                                                    fontWeight: 600,
+                                                                    background: `${g.color}15`,
+                                                                    color: g.color,
+                                                                    border: `1px solid ${g.color}40`
                                                                 }}
                                                             >
-                                                                {coverImage && (
-                                                                    <div style={{
-                                                                        width: '80px',
-                                                                        height: '80px',
-                                                                        borderRadius: '8px',
-                                                                        overflow: 'hidden',
-                                                                        flexShrink: 0
-                                                                    }}>
-                                                                        <SecureImage path={coverImage} alt={item.title} style={{
-                                                                            width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none'
-                                                                        }} />
-                                                                    </div>
-                                                                )}
-                                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                                    <div style={{
-                                                                        fontWeight: 600,
-                                                                        fontSize: '1rem',
-                                                                        color: '#1e293b',
-                                                                        marginBottom: '0.25rem',
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        gap: '0.5rem'
-                                                                    }}>
-                                                                        <Plane size={16} style={{ color: group.color }} />
-                                                                        {item.title}
-                                                                    </div>
-                                                                    {item.content && (
-                                                                        <div style={{
-                                                                            fontSize: '0.85rem',
-                                                                            color: '#64748b',
-                                                                            overflow: 'hidden',
-                                                                            textOverflow: 'ellipsis',
-                                                                            display: '-webkit-box',
-                                                                            WebkitLineClamp: 2,
-                                                                            WebkitBoxOrient: 'vertical'
-                                                                        }}>
-                                                                            {item.content}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
+                                                                {g.name}
+                                                            </span>
                                                         );
                                                     })}
                                                 </div>
                                             )}
 
-                                            {/* Add Button for this group */}
-                                            <button
-                                                onClick={() => handleEdit(null, group.id)}
-                                                style={{
-                                                    marginTop: '1rem',
-                                                    width: '100%',
-                                                    padding: '0.75rem',
-                                                    background: `${group.color}15`,
-                                                    border: `2px dashed ${group.color}50`,
-                                                    borderRadius: '12px',
-                                                    color: group.color,
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    gap: '0.5rem',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                            >
-                                                <Plus size={18} />
-                                                新增 {group.name} 的資訊
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                                            {/* Title */}
+                                            <h3 style={{
+                                                margin: 0,
+                                                fontSize: '1.1rem',
+                                                fontWeight: 700,
+                                                color: '#1e293b',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem'
+                                            }}>
+                                                <Plane size={18} style={{ color: '#3b82f6' }} />
+                                                {item.title}
+                                            </h3>
 
-                        {/* Ungrouped entries (if any) */}
-                        {flightsByGroup['_ungrouped']?.length > 0 && (
-                            <div style={{
-                                background: 'white',
-                                borderRadius: '16px',
-                                overflow: 'hidden',
-                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
-                                border: '3px solid #e2e8f020'
-                            }}>
-                                <div
-                                    onClick={() => toggleGroup('_ungrouped')}
-                                    style={{
-                                        padding: '1rem',
-                                        background: '#f8fafc',
-                                        borderLeft: '4px solid #94a3b8',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <Plane size={20} style={{ color: '#94a3b8' }} />
-                                        <span style={{ fontWeight: 700, fontSize: '1.1rem', color: '#64748b' }}>未分類</span>
-                                        <span style={{
-                                            background: '#94a3b8',
-                                            color: 'white',
-                                            fontSize: '0.75rem',
-                                            padding: '2px 8px',
-                                            borderRadius: '12px',
-                                            fontWeight: 600
-                                        }}>{flightsByGroup['_ungrouped'].length} 筆</span>
-                                    </div>
-                                    <ChevronRight
-                                        size={20}
-                                        style={{
-                                            color: '#94a3b8',
-                                            transition: 'transform 0.2s',
-                                            transform: expandedGroup === '_ungrouped' ? 'rotate(90deg)' : 'rotate(0deg)'
-                                        }}
-                                    />
-                                </div>
-
-                                {expandedGroup === '_ungrouped' && (
-                                    <div style={{ padding: '1rem', background: '#fafafa' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                            {flightsByGroup['_ungrouped'].map(item => (
-                                                <div
-                                                    key={item.id}
-                                                    onClick={() => handleView(item)}
-                                                    style={{
-                                                        background: 'white',
-                                                        borderRadius: '12px',
-                                                        padding: '1rem',
-                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                >
-                                                    <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.title}</div>
-                                                    {item.content && (
-                                                        <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.25rem' }}>
-                                                            {item.content.substring(0, 100)}...
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
+                                            {/* Content Preview */}
+                                            {item.content && (
+                                                <p style={{
+                                                    margin: '0.5rem 0 0',
+                                                    fontSize: '0.9rem',
+                                                    color: '#64748b',
+                                                    lineHeight: 1.5,
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: 'vertical'
+                                                }}>
+                                                    {item.content}
+                                                </p>
+                                            )}
                                         </div>
+
+                                        {/* Cover Image */}
+                                        {coverImage && (
+                                            <div style={{ position: 'relative', height: '160px', background: '#f1f5f9' }}>
+                                                <SecureImage
+                                                    path={coverImage}
+                                                    alt={item.title}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
+                                                />
+                                                {item.img_urls && item.img_urls.length > 1 && (
+                                                    <span style={{
+                                                        position: 'absolute',
+                                                        bottom: '8px',
+                                                        right: '8px',
+                                                        background: 'rgba(0,0,0,0.6)',
+                                                        color: 'white',
+                                                        padding: '2px 8px',
+                                                        borderRadius: '10px',
+                                                        fontSize: '0.75rem'
+                                                    }}>
+                                                        +{item.img_urls.length - 1}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             )}
+
+            {/* FAB */}
+            <button className={styles.fab} onClick={() => handleEdit(null)}>
+                <Plus size={32} />
+            </button>
 
             {/* View Modal */}
             {viewingFlight && (
@@ -594,7 +619,7 @@ export default function FlightsPage() {
                                     <div style={{ width: '100%', background: '#f1f5f9', position: 'relative' }}>
                                         {displayImages.length === 1 ? (
                                             <div style={{ width: '100%', height: '300px', background: '#000' }}>
-                                                <SecureImage path={displayImages[0]} alt="Flight Image" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                                <SecureImage path={displayImages[0]} alt="Image" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                                             </div>
                                         ) : (
                                             <div style={{
@@ -624,6 +649,38 @@ export default function FlightsPage() {
 
                         {/* Content */}
                         <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+                            {/* Tags in View Modal */}
+                            {(() => {
+                                const gids = viewingFlight.group_ids || (viewingFlight.group_id ? [viewingFlight.group_id] : []);
+                                if (gids.length > 0) {
+                                    return (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.75rem' }}>
+                                            {gids.map(gid => {
+                                                const g = getGroupById(gid);
+                                                if (!g) return null;
+                                                return (
+                                                    <span
+                                                        key={gid}
+                                                        style={{
+                                                            padding: '0.25rem 0.6rem',
+                                                            borderRadius: '12px',
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: 600,
+                                                            background: `${g.color}15`,
+                                                            color: g.color,
+                                                            border: `1px solid ${g.color}40`
+                                                        }}
+                                                    >
+                                                        {g.name}
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
+
                             <h3 style={{
                                 fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem', color: '#1e293b'
                             }}>{viewingFlight.title}</h3>
